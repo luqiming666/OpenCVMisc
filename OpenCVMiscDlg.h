@@ -29,6 +29,7 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
+	afx_msg void OnDestroy();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
@@ -38,11 +39,11 @@ private:
 private:
 	void ShowOriginalImage();
 
-public:
+public:	
 	afx_msg void OnBnClickedButtonBrowse();
-	afx_msg void OnDestroy();
 	afx_msg void OnBnClickedButtonCloseAllWin();
 	afx_msg void OnBnClickedButtonShowOriginal();
+	afx_msg void OnBnClickedButtonProcessPixels();
 	afx_msg void OnBnClickedButtonGrayscale();
 	afx_msg void OnBnClickedButtonBlur();
 };

@@ -187,6 +187,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CAutoTicker.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="OpenCVMisc.h" />
     <ClInclude Include="OpenCVMiscDlg.h" />

@@ -13,6 +13,7 @@
 #define IDC_BUTTON_SHOW_ORIGINAL        1003
 #define IDC_BUTTON_GRAYSCALE            1004
 #define IDC_BUTTON_BLUR                 1005
+#define IDC_BUTTON_PROCESS_PIXELS       1006
 
 // Next default values for new objects
 // 
