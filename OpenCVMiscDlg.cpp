@@ -20,6 +20,9 @@ using namespace cv;
 #define new DEBUG_NEW
 #endif
 
+// OpenCV documentation: https://docs.opencv.org/4.x/index.html
+// 应用案例参考文章：https://blog.csdn.net/qq_28245087/article/details/131229053
+//
 Mat gSrcImg; // The original source image
 
 
@@ -63,9 +66,20 @@ COpenCVMiscDlg::COpenCVMiscDlg(CWnd* pParent /*=nullptr*/)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
+	// Open the console window for logging
+	if (::GetConsoleWindow() == NULL)
+	{
+		if (::AllocConsole())
+		{
+			FILE* stream;
+			freopen_s(&stream, "CONOUT$", "w", stdout);
+		}
+	}
+
 #ifdef DEBUG
-	mSourceFile = _T("D:\\Dev\\GitHub\\OpenCVMisc\\assets\\darkhouse.png");
-	gSrcImg = imread((LPCTSTR)mSourceFile, IMREAD_COLOR); // Read the file
+	mSourceFile = _T("D:\\Dev\\GitHub\\OpenCVMisc\\assets\\puppy.png");
+	gSrcImg = imread((LPCTSTR)mSourceFile, IMREAD_COLOR);
+	DumpImageInfo();
 #endif // DEBUG
 }
 
@@ -86,6 +100,9 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_GRAYSCALE, &COpenCVMiscDlg::OnBnClickedButtonGrayscale)
 	ON_BN_CLICKED(IDC_BUTTON_BLUR, &COpenCVMiscDlg::OnBnClickedButtonBlur)
 	ON_BN_CLICKED(IDC_BUTTON_PROCESS_PIXELS, &COpenCVMiscDlg::OnBnClickedButtonProcessPixels)
+	ON_BN_CLICKED(IDC_BUTTON_BLEND_2_IMAGES, &COpenCVMiscDlg::OnBnClickedButtonBlend2Images)
+	ON_BN_CLICKED(IDC_BUTTON_bilateralFilter, &COpenCVMiscDlg::OnBnClickedButtonbilateralfilter)
+	ON_BN_CLICKED(IDC_BUTTON_RESIZE, &COpenCVMiscDlg::OnBnClickedButtonResize)
 END_MESSAGE_MAP()
 
 
@@ -119,16 +136,6 @@ BOOL COpenCVMiscDlg::OnInitDialog()
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
-
-	// Open the console window for logging
-	if (::GetConsoleWindow() == NULL)
-	{
-		if (::AllocConsole())
-		{
-			FILE* stream;
-			freopen_s(&stream, "CONOUT$", "w", stdout);
-		}
-	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -199,6 +206,7 @@ void COpenCVMiscDlg::OnBnClickedButtonBrowse()
 
 		gSrcImg = imread((LPCTSTR)mSourceFile, IMREAD_COLOR); // Read the file
 		ShowOriginalImage();
+		DumpImageInfo();
 	}
 }
 
@@ -212,14 +220,21 @@ void COpenCVMiscDlg::OnBnClickedButtonCloseAllWin()
 	cv::destroyAllWindows();
 }
 
+void COpenCVMiscDlg::DumpImageInfo()
+{
+	if (mSourceFile.IsEmpty()) return;
+
+	std::cout << "Source file: " << mSourceFile << std::endl;
+	std::cout << "[Format] width: " << gSrcImg.cols << " height: " << gSrcImg.rows << " channels: " << gSrcImg.channels() << " type: " << gSrcImg.type() << std::endl;
+	std::cout << "Mean: " << cv::mean(gSrcImg) << std::endl;
+}
+
 void COpenCVMiscDlg::ShowOriginalImage()
 {
 	if (mSourceFile.IsEmpty()) return;
 
 	namedWindow("Original Image", WINDOW_AUTOSIZE); // Create a window for display.
 	imshow("Original Image", gSrcImg); // Show our image inside it.
-
-	std::cout << "Source format >> width: " << gSrcImg.cols << " height: " << gSrcImg.rows << " channels: " << gSrcImg.channels() << " type: " << gSrcImg.type() << std::endl;
 }
 
 int gamma_cor = 100;
@@ -238,7 +253,7 @@ void on_gamma_correction_trackbar(int, void*)
 	imshow(pGammaWinName, new_image);
 }
 
-// 遍历每个像素，调整画面亮度
+// [遍历每个像素] 调整画面 亮度/对比度，以及非线性优化：gamma校正
 // 处理方法：newPixel(i, j) = alpha * originalPixel(i, j) + beta
 // https://docs.opencv.org/4.10.0/d3/dc1/tutorial_basic_linear_transform.html
 void COpenCVMiscDlg::OnBnClickedButtonProcessPixels()
@@ -275,6 +290,22 @@ void COpenCVMiscDlg::OnBnClickedButtonProcessPixels()
 	createTrackbar("Gamma correction", pGammaWinName, &gamma_cor, 200, on_gamma_correction_trackbar);
 }
 
+// 将两个相同尺寸的图像叠加在一起
+// https://docs.opencv.org/4.10.0/d5/dc4/tutorial_adding_images.html
+void COpenCVMiscDlg::OnBnClickedButtonBlend2Images()
+{
+	Mat src1, src2, dst;
+	src1 = imread(".\\assets\\LinuxLogo.jpg");
+	src2 = imread(".\\assets\\WindowsLogo.jpg");
+
+	double alpha = 0.5; 
+	double beta = 1 - alpha;
+	addWeighted(src1, alpha, src2, beta, 0.0, dst); // dst = alpha * src1 + beta * src2 + gamma
+	imshow("Linear Blend", dst);
+}
+
+
+
 
 // 图像处理函数 #include <opencv2/imgproc.hpp>
 // https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html
@@ -285,26 +316,29 @@ void COpenCVMiscDlg::OnBnClickedButtonGrayscale()
 	imshow("Grayscale", grey);
 }
 
-// 高斯模糊
-//	参数Size：内核的宽度和高度，须为奇数，或为0（则由sigma参数计算而得）
-//	参数sigmaX：X方向的sigma，sigma越大越模糊（对更多的领域像素产生影响）
-//	参数sigmaY：如果为0，则取值同sigmaX
+// 几种图像平滑算法 Image Blurring (Image Smoothing)
+// https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
 void COpenCVMiscDlg::OnBnClickedButtonBlur()
 {
+	// 高斯模糊
+	//	参数Size：内核的宽度和高度，须为奇数，或为0（则由sigma参数计算而得）
+	//	参数sigmaX：X方向的sigma，sigma越大越模糊（对更多的领域像素产生影响）
+	//	参数sigmaY：如果为0，则取值同sigmaX
 	Mat newImage;
 	{
 		CAutoTicker autoTicker("GaussianBlur");
 		GaussianBlur(gSrcImg, newImage, Size(0, 0), 5);
 	}
-	imshow("Blur-1", newImage); 
+	imshow("Blur-1-GaussianBlur", newImage); 
 
 
 	// 参数ksize为光圈大小，须为奇数，数值越大越模糊（主观：水彩/像素颗粒感，不如高斯平滑）
+	// 有去噪效果
 	{
 		CAutoTicker autoTicker("medianBlur");
 		medianBlur(gSrcImg, newImage, 15);
 	}
-	imshow("Blur-2", newImage);
+	imshow("Blur-2-medianBlur", newImage);
 
 
 	// 效果接近于高斯模糊，但更快！Size为内核的宽和高
@@ -312,5 +346,45 @@ void COpenCVMiscDlg::OnBnClickedButtonBlur()
 		CAutoTicker autoTicker("stackBlur");
 		stackBlur(gSrcImg, newImage, Size(19, 19));
 	}
-	imshow("Blur-3", newImage);
+	imshow("Blur-3-stackBlur", newImage);
+
+
+	// 测试boxFilter，并且与原图合并对比
+	Mat blur_merged = Mat(gSrcImg.rows, gSrcImg.cols * 2, gSrcImg.type());
+	{
+		CAutoTicker autoTicker("boxFilter");
+		boxFilter(gSrcImg, newImage, -1, Size(19, 19));
+	}
+	hconcat(gSrcImg, newImage, blur_merged);
+	imshow("Blur-4 (original vs. boxFilter)", blur_merged);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonbilateralfilter()
+{
+	// 去噪效果，与高斯模糊相比，增加了“边界”的考虑。算法较慢！
+	// 注：medianBlur也有去噪效果
+	Mat src = imread(".\\assets\\noisypic.png");
+	Mat merged = Mat(src.rows, src.cols * 2, src.type());
+	Mat newImage;
+	{
+		CAutoTicker autoTicker("bilateralFilter");
+		bilateralFilter(src, newImage, 9, 250, 250);
+	}
+
+	cv::putText(src, "Before", Point(0, 180), FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 1, LINE_AA);
+	cv::putText(newImage, "After", Point(0, 180), FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 1, LINE_AA);
+	cv::hconcat(src, newImage, merged);
+	imshow("bilateralFilter", merged);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonResize()
+{
+	//float aspectRatio = gSrcImg.cols * 1.0 / gSrcImg.rows;
+	float ratio = 0.5f;
+	int newWidth = gSrcImg.cols * ratio;
+	int newHeight = gSrcImg.rows * ratio;
+
+	Mat newImage;
+	cv::resize(gSrcImg, newImage, Size(newWidth, newHeight), INTER_AREA);
+	imshow("Resize", newImage);
 }

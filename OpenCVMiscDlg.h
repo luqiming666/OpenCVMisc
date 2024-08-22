@@ -37,6 +37,7 @@ private:
 	CString mSourceFile;
 
 private:
+	void DumpImageInfo();
 	void ShowOriginalImage();
 
 public:	
@@ -46,4 +47,7 @@ public:
 	afx_msg void OnBnClickedButtonProcessPixels();
 	afx_msg void OnBnClickedButtonGrayscale();
 	afx_msg void OnBnClickedButtonBlur();
+	afx_msg void OnBnClickedButtonBlend2Images();
+	afx_msg void OnBnClickedButtonbilateralfilter();
+	afx_msg void OnBnClickedButtonResize();
 };
