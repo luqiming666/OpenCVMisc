@@ -106,6 +106,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_EDGE, &COpenCVMiscDlg::OnBnClickedButtonDetectEdge)
 	ON_BN_CLICKED(IDC_BUTTON_FLIP, &COpenCVMiscDlg::OnBnClickedButtonFlip)
 	ON_BN_CLICKED(IDC_BUTTON_ROTATE, &COpenCVMiscDlg::OnBnClickedButtonRotate)
+	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT, &COpenCVMiscDlg::OnBnClickedButtonFindObject)
 END_MESSAGE_MAP()
 
 
@@ -201,7 +202,7 @@ void COpenCVMiscDlg::OnDestroy()
 
 void COpenCVMiscDlg::OnBnClickedButtonBrowse()
 {
-	CFileDialog fileDlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Image Files (*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp)|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp|All Files (*.*)|*.*||"), NULL);
+	CFileDialog fileDlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Image Files (*.jpg;*.jpeg;*.png;*.tif;*.bmp;*.webp)|*.jpg;*.jpeg;*.png;*.tif;*.bmp;*.webp|All Files (*.*)|*.*||"), NULL);
 	if (fileDlg.DoModal() == IDOK)
 	{
 		mSourceFile = fileDlg.GetPathName(); 
@@ -423,7 +424,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectEdge()
 {
 	if (mSourceFile.IsEmpty()) return;
 
-	Mat srcGray = imread((LPCTSTR)mSourceFile, IMREAD_GRAYSCALE);
+	Mat srcGray = imread((LPCTSTR)mSourceFile, IMREAD_GRAYSCALE); // 灰度图
 	Mat absImage;
 
 	// Canny边缘检测
@@ -443,4 +444,49 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectEdge()
 	cv::Sobel(srcGray, sobely, CV_64F, 0, 1, 5);
 	cv::addWeighted(sobelx, 0.5, sobely, 0.5, 0, sobelImage);
 	imshow("Edges - Sobel", sobelImage);
+}
+
+
+// 各种综合应用
+// 图像/物体匹配：源图像与模板图像须保持相同的分辨率
+void COpenCVMiscDlg::OnBnClickedButtonFindObject()
+{
+	Mat srcImage, targetObj;
+	srcImage = imread(".\\assets\\wukong.jpg");
+	targetObj = imread(".\\assets\\bsl.png", IMREAD_GRAYSCALE); // 灰度图
+	if (srcImage.empty() || targetObj.empty()) return;
+
+#ifdef DEBUG
+	std::cout << "Source type: " << srcImage.type() << " Template type: " << targetObj.type() << std::endl;
+#endif // DEBUG
+
+	// 使用模板匹配算法进行比对
+	Mat result, srcGray;
+	//int result_cols = srcImage.cols - targetObj.cols + 1;
+	//int result_rows = srcImage.rows - targetObj.rows + 1;
+	//result.create(result_rows, result_cols, CV_32FC1);
+	cv::cvtColor(srcImage, srcGray, COLOR_BGR2GRAY); // 灰度化处理
+	cv::matchTemplate(srcGray, targetObj, result, TM_CCOEFF_NORMED);
+
+	// 获取比对结果中大于阈值的位置
+	double threshValue = 0.9;
+	Mat threshResult;
+	cv::threshold(result, threshResult, threshValue, 1.0, THRESH_BINARY);
+
+	Mat locations;
+	cv::findNonZero(threshResult, locations);
+#ifdef DEBUG
+	std::cout << "Valid locations: " << locations.total() << std::endl;
+#endif // DEBUG
+
+	if (!locations.empty()) {
+		for (int i = 0; i < locations.total(); i++) {
+			Point p = locations.at<Point>(i);
+			cv::rectangle(srcImage, p, Point(p.x + targetObj.cols, p.y + targetObj.rows), Scalar(0, 255, 0), 1);
+		}
+		imshow("Find Object", srcImage);
+	}
+	else {
+		::AfxMessageBox("Object Not Found!");
+	}
 }
