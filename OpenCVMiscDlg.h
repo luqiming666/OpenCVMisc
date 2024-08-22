@@ -39,6 +39,7 @@ private:
 private:
 	void DumpImageInfo();
 	void ShowOriginalImage();
+	void _FindObjectInImage();
 
 public:	
 	afx_msg void OnBnClickedButtonBrowse();

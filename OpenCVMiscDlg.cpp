@@ -209,6 +209,11 @@ void COpenCVMiscDlg::OnBnClickedButtonBrowse()
 		UpdateData(FALSE);
 
 		gSrcImg = imread((LPCTSTR)mSourceFile, IMREAD_COLOR); // Read the file
+		if (gSrcImg.empty()) {
+			::AfxMessageBox("Failed to open the source file.");
+			return;
+		}
+
 		ShowOriginalImage();
 		DumpImageInfo();
 	}
@@ -235,7 +240,7 @@ void COpenCVMiscDlg::DumpImageInfo()
 
 void COpenCVMiscDlg::ShowOriginalImage()
 {
-	if (mSourceFile.IsEmpty()) return;
+	if (gSrcImg.empty()) return;
 
 	namedWindow("Original Image", WINDOW_AUTOSIZE); // Create a window for display.
 	imshow("Original Image", gSrcImg); // Show our image inside it.
@@ -257,7 +262,7 @@ void on_gamma_correction_trackbar(int, void*)
 	imshow(pGammaWinName, new_image);
 }
 
-// [遍历每个像素] 调整画面 亮度/对比度，以及非线性优化：gamma校正
+// 调整画面 亮度/对比度，以及非线性优化：gamma校正
 // 处理方法：newPixel(i, j) = alpha * originalPixel(i, j) + beta
 // https://docs.opencv.org/4.10.0/d3/dc1/tutorial_basic_linear_transform.html
 void COpenCVMiscDlg::OnBnClickedButtonProcessPixels()
@@ -267,6 +272,7 @@ void COpenCVMiscDlg::OnBnClickedButtonProcessPixels()
 	double alpha = 1.3; /*< Simple contrast control, [1.0-3.0] */
 	int beta = 40;       /*< Simple brightness control, [0-100] */
 
+	// 遍历每个像素
 	for (int y = 0; y < gSrcImg.rows; y++) {
 		for (int x = 0; x < gSrcImg.cols; x++) {
 			for (int c = 0; c < gSrcImg.channels(); c++) {
@@ -304,10 +310,9 @@ void COpenCVMiscDlg::OnBnClickedButtonBlend2Images()
 
 	double alpha = 0.5; 
 	double beta = 1 - alpha;
-	addWeighted(src1, alpha, src2, beta, 0.0, dst); // dst = alpha * src1 + beta * src2 + gamma
+	cv::addWeighted(src1, alpha, src2, beta, 0.0, dst); // dst = alpha * src1 + beta * src2 + gamma
 	imshow("Linear Blend", dst);
 }
-
 
 
 
@@ -316,8 +321,13 @@ void COpenCVMiscDlg::OnBnClickedButtonBlend2Images()
 void COpenCVMiscDlg::OnBnClickedButtonGrayscale()
 {
 	Mat grey;
-	cvtColor(gSrcImg, grey, COLOR_BGR2GRAY);
+	cv::cvtColor(gSrcImg, grey, COLOR_BGR2GRAY);
 	imshow("Grayscale", grey);
+
+	// 对灰度图像进行二值化处理（即为黑白图像）
+	Mat binaryImage;
+	cv::threshold(grey, binaryImage, 127, 255, THRESH_BINARY);
+	imshow("Black and White", binaryImage);
 }
 
 // 几种图像平滑算法 Image Blurring (Image Smoothing)
@@ -375,8 +385,10 @@ void COpenCVMiscDlg::OnBnClickedButtonbilateralfilter()
 		bilateralFilter(src, newImage, 9, 250, 250);
 	}
 
+	// 图片上叠加文字
 	cv::putText(src, "Before", Point(0, 180), FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 1, LINE_AA);
 	cv::putText(newImage, "After", Point(0, 180), FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 1, LINE_AA);
+
 	cv::hconcat(src, newImage, merged);
 	imshow("bilateralFilter", merged);
 }
@@ -400,8 +412,10 @@ void COpenCVMiscDlg::OnBnClickedButtonFlip()
 	//	1 - 围绕Y轴
 	//	-1 - X轴Y轴同时翻转
 	Mat flipped1, flipped2;
+
 	cv::flip(gSrcImg, flipped1, 0);
 	imshow("Flip around x-axis", flipped1);
+
 	cv::flip(gSrcImg, flipped2, 1);
 	imshow("Flip around y-axis", flipped2);
 }
@@ -447,9 +461,16 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectEdge()
 }
 
 
-// 各种综合应用
+
+// 综合应用
 // 图像/物体匹配：源图像与模板图像须保持相同的分辨率
 void COpenCVMiscDlg::OnBnClickedButtonFindObject()
+{
+	CAutoTicker ticker("FindObject");
+	_FindObjectInImage();
+}
+
+void COpenCVMiscDlg::_FindObjectInImage()
 {
 	Mat srcImage, targetObj;
 	srcImage = imread(".\\assets\\wukong.jpg");
