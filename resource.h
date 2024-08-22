@@ -17,6 +17,11 @@
 #define IDC_BUTTON_BLEND_2_IMAGES       1007
 #define IDC_BUTTON_bilateralFilter      1008
 #define IDC_BUTTON_RESIZE               1009
+#define IDC_BUTTON_FIND_OBJECT          1010
+#define IDC_BUTTON_RESIZE2              1011
+#define IDC_BUTTON_DETECT_EDGE          1011
+#define IDC_BUTTON_FLIP                 1012
+#define IDC_BUTTON_ROTATE               1013
 
 // Next default values for new objects
 // 

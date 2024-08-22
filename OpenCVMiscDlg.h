@@ -50,4 +50,7 @@ public:
 	afx_msg void OnBnClickedButtonBlend2Images();
 	afx_msg void OnBnClickedButtonbilateralfilter();
 	afx_msg void OnBnClickedButtonResize();
+	afx_msg void OnBnClickedButtonDetectEdge();
+	afx_msg void OnBnClickedButtonFlip();
+	afx_msg void OnBnClickedButtonRotate();
 };

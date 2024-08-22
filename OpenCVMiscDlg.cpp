@@ -103,6 +103,9 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_BLEND_2_IMAGES, &COpenCVMiscDlg::OnBnClickedButtonBlend2Images)
 	ON_BN_CLICKED(IDC_BUTTON_bilateralFilter, &COpenCVMiscDlg::OnBnClickedButtonbilateralfilter)
 	ON_BN_CLICKED(IDC_BUTTON_RESIZE, &COpenCVMiscDlg::OnBnClickedButtonResize)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_EDGE, &COpenCVMiscDlg::OnBnClickedButtonDetectEdge)
+	ON_BN_CLICKED(IDC_BUTTON_FLIP, &COpenCVMiscDlg::OnBnClickedButtonFlip)
+	ON_BN_CLICKED(IDC_BUTTON_ROTATE, &COpenCVMiscDlg::OnBnClickedButtonRotate)
 END_MESSAGE_MAP()
 
 
@@ -387,4 +390,57 @@ void COpenCVMiscDlg::OnBnClickedButtonResize()
 	Mat newImage;
 	cv::resize(gSrcImg, newImage, Size(newWidth, newHeight), INTER_AREA);
 	imshow("Resize", newImage);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonFlip()
+{
+	// 翻转方法：
+	//	0 - 围绕X轴
+	//	1 - 围绕Y轴
+	//	-1 - X轴Y轴同时翻转
+	Mat flipped1, flipped2;
+	cv::flip(gSrcImg, flipped1, 0);
+	imshow("Flip around x-axis", flipped1);
+	cv::flip(gSrcImg, flipped2, 1);
+	imshow("Flip around y-axis", flipped2);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonRotate()
+{
+	if (gSrcImg.empty()) return;
+
+	// 获取图像大小
+	int width = gSrcImg.cols;
+	int height = gSrcImg.rows;
+	Mat mtrx = cv::getRotationMatrix2D(Point2f(width / 2, height / 2), 45, 1);
+	Mat	rotated;
+	warpAffine(gSrcImg, rotated, mtrx, Size(width, height));
+	imshow("Rotation", rotated);
+}
+
+// 边缘检测的几种算法
+void COpenCVMiscDlg::OnBnClickedButtonDetectEdge()
+{
+	if (mSourceFile.IsEmpty()) return;
+
+	Mat srcGray = imread((LPCTSTR)mSourceFile, IMREAD_GRAYSCALE);
+	Mat absImage;
+
+	// Canny边缘检测
+	Mat cannyEdges;
+	cv::Canny(srcGray, cannyEdges, 100, 200);
+	imshow("Edges - Canny", cannyEdges);
+
+	// Laplacian边缘检测
+	Mat lapEdges;
+	cv::Laplacian(srcGray, lapEdges, CV_64F, 3);
+	cv::convertScaleAbs(lapEdges, absImage); // 转换为 8 位无符号整数以便显示
+	imshow("Edges - Laplacian", absImage);
+
+	// Sobel边缘检测
+	Mat sobelx, sobely, sobelImage;
+	cv::Sobel(srcGray, sobelx, CV_64F, 1, 0, 5);
+	cv::Sobel(srcGray, sobely, CV_64F, 0, 1, 5);
+	cv::addWeighted(sobelx, 0.5, sobely, 0.5, 0, sobelImage);
+	imshow("Edges - Sobel", sobelImage);
 }
