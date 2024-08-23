@@ -55,4 +55,5 @@ public:
 	afx_msg void OnBnClickedButtonFlip();
 	afx_msg void OnBnClickedButtonRotate();
 	afx_msg void OnBnClickedButtonFindObject();
+	afx_msg void OnBnClickedButtonScanIdCard();
 };

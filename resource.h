@@ -22,6 +22,7 @@
 #define IDC_BUTTON_DETECT_EDGE          1011
 #define IDC_BUTTON_FLIP                 1012
 #define IDC_BUTTON_ROTATE               1013
+#define IDC_BUTTON_SCAN_ID_CARD         1014
 
 // Next default values for new objects
 // 
