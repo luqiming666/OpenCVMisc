@@ -108,6 +108,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_ROTATE, &COpenCVMiscDlg::OnBnClickedButtonRotate)
 	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT, &COpenCVMiscDlg::OnBnClickedButtonFindObject)
 	ON_BN_CLICKED(IDC_BUTTON_SCAN_ID_CARD, &COpenCVMiscDlg::OnBnClickedButtonScanIdCard)
+	ON_BN_CLICKED(IDC_BUTTON_MORPHOLOGY, &COpenCVMiscDlg::OnBnClickedButtonMorphology)
 END_MESSAGE_MAP()
 
 
@@ -438,6 +439,51 @@ void COpenCVMiscDlg::OnBnClickedButtonRotate()
 	Mat	rotated;
 	warpAffine(gSrcImg, rotated, mtrx, Size(width, height));
 	imshow("Rotation", rotated);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonMorphology()
+{
+	if (gSrcImg.empty()) return;
+
+	Mat processed;
+	Mat srcGray = imread((LPCTSTR)mSourceFile, IMREAD_GRAYSCALE); // 灰度图
+
+	// 膨胀
+	// 膨胀的意义：1. 连接断开的区域；2. 突出和加粗物体的边界；3. 消除小的空洞和噪声；4. 增强物体的特征
+	// 操作对象通常是灰度图或二值图
+	Mat kernel = cv::getStructuringElement(MORPH_RECT, Size(3, 3)); 
+	cv::dilate(srcGray, processed, kernel);
+	imshow("Dilation", processed);
+
+	// 腐蚀操作
+	// 作用：去除孤立噪声点，消除小物体，断开狭窄连接以分离物体，细化物体轮廓
+	cv::erode(srcGray, processed, kernel);
+	imshow("Erode", processed);
+
+	// 开运算（由腐蚀操作后跟膨胀操作组成）
+	// 作用：去除小的物体，平滑物体边界
+	cv::morphologyEx(srcGray, processed, MORPH_OPEN, kernel);
+	imshow("Morphology - open", processed);
+
+	// 闭运算（由膨胀操作后跟腐蚀操作组成）
+	// 作用：填充小孔和间隙，平滑物体边界
+	cv::morphologyEx(srcGray, processed, MORPH_CLOSE, kernel);
+	imshow("Morphology - close", processed);
+
+	// 形态学梯度（先对原始图像进行膨胀，再用膨胀后的图像减去腐蚀后的图像）
+	// 作用：突出物体的边缘，增强图像的对比度
+	cv::morphologyEx(srcGray, processed, MORPH_GRADIENT, kernel);
+	imshow("Morphology - Gradient", processed);
+
+	// 顶帽操作（用原始图像减去其开运算的结果）
+	// 作用：提取明亮区域的细节，校正不均匀照明
+	cv::morphologyEx(srcGray, processed, MORPH_TOPHAT, kernel);
+	imshow("Morphology - TopHat", processed);
+
+	// 黑帽操作（用闭运算的结果减去原始图像）
+	// 作用：提取暗区域的细节，增强暗物体的对比度
+	cv::morphologyEx(srcGray, processed, MORPH_BLACKHAT, kernel);
+	imshow("Morphology - BlackHat", processed);
 }
 
 // 边缘检测的几种算法
