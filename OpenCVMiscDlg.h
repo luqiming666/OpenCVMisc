@@ -40,6 +40,8 @@ private:
 	void DumpImageInfo();
 	void ShowOriginalImage();
 	void _FindObjectInImage();
+	void _DetectIDCard_WithGoodDilation();
+	void _DetectIDCard_WithBadDilation();
 
 public:	
 	afx_msg void OnBnClickedButtonBrowse();

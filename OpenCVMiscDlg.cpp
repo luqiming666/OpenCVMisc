@@ -437,7 +437,7 @@ void COpenCVMiscDlg::OnBnClickedButtonRotate()
 	int height = gSrcImg.rows;
 	Mat mtrx = cv::getRotationMatrix2D(Point2f((float)width / 2, (float)height / 2), 45, 1);
 	Mat	rotated;
-	warpAffine(gSrcImg, rotated, mtrx, Size(width, height));
+	cv::warpAffine(gSrcImg, rotated, mtrx, Size(width, height));
 	imshow("Rotation", rotated);
 }
 
@@ -579,8 +579,7 @@ Rect combineRects(const std::vector<Rect>& rects) {
 	return Rect(minX, minY, maxX - minX, maxY - minY);
 }
 
-// 识别身份证号码
-void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
+void COpenCVMiscDlg::_DetectIDCard_WithBadDilation()
 {
 	Mat srcImage = imread(".\\assets\\pigidcard.png");
 	if (srcImage.empty()) return;
@@ -593,12 +592,13 @@ void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
 	Mat binary;
 	cv::threshold(grayImg, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
 
-	// 对二值化图像进行膨胀操作
-	Mat kernel = cv::getStructuringElement(MORPH_RECT, Size(5, 5)); // 可微调
+	// （不充分）膨胀操作 —— 合并小区域，但不足以把身份证号码去连成一片！
+	Mat kernel = cv::getStructuringElement(MORPH_RECT, Size(5, 5));
 	Mat dilation;
 	cv::dilate(binary, dilation, kernel);
+	//imshow("ID Card - dilation", dilation);
 
-	// 在膨胀后的图像中查找轮廓
+	// 查找轮廓
 	std::vector<std::vector<Point>> contours;
 	std::vector<Vec4i> hierarchy;
 	cv::findContours(dilation, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
@@ -609,7 +609,7 @@ void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
 	Rect firstRect;
 	if (!contours.empty()) {
 		firstRect = cv::boundingRect(contours[0]);
-	}	
+	}
 	for (size_t i = 0; i < contours.size(); i++) {
 		double area = cv::contourArea(contours[i]);
 		Rect roi = cv::boundingRect(contours[i]);
@@ -624,10 +624,10 @@ void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
 #if 0
 		// 队列中的轮廓逐个画出
 		if (i < 20) {
-			cv::drawContours(srcImage, contours, i, Scalar(0, 255, 0));
+			cv::rectangle(srcImage, roi, Scalar(0, 255, 0), 2);
 		}
 #endif 	
-		
+
 		double aspectRatio = (double)roi.width / roi.height;
 		// 假设身份证号码区域的面积较大且长宽比在一定范围内
 		// 根据实际情况调整这些阈值
@@ -645,22 +645,105 @@ void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
 		Rect combinedRect = combineRects(roiRects); // 将身份证号码区域合并
 		cv::rectangle(srcImage, combinedRect, Scalar(0, 255, 0), 2);
 
-		Mat cropped = dilation(combinedRect);
+		Mat cropped = binary(combinedRect);
 		imshow("ID Card - number only", cropped);
+
+		// 使用 Tesseract OCR
 	}
 
 	/*
 	// 使用 Tesseract OCR
-    tesseract::TessBaseAPI tess;
-    tess.Init(NULL, "eng", tesseract::OEM_DEFAULT);
-    tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
-    tess.SetImage((uchar*)binary.data, binary.cols, binary.rows, 1, binary.cols);
+	tesseract::TessBaseAPI tess;
+	tess.Init(NULL, "eng", tesseract::OEM_DEFAULT);
+	tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
+	tess.SetImage((uchar*)binary.data, binary.cols, binary.rows, 1, binary.cols);
 
-    char* outText = tess.GetUTF8Text();
-    cout << "识别出的文本：" << outText << endl;
+	char* outText = tess.GetUTF8Text();
+	cout << "识别出的文本：" << outText << endl;
 
-    tess.End();
+	tess.End();
 	*/
 
 	imshow("ID Card", srcImage);
+}
+
+void COpenCVMiscDlg::_DetectIDCard_WithGoodDilation()
+{
+	Mat srcImage = imread(".\\assets\\pigidcard.png");
+	if (srcImage.empty()) return;
+
+	// 将图像转换为灰度图
+	Mat grayImg;
+	cv::cvtColor(srcImage, grayImg, COLOR_BGR2GRAY);
+
+	// 对灰度图像进行二值化处理（注：THRESH_OTSU会自动选择最优的阈值 而忽略函数参数指定的阈值）
+	Mat binary;
+	cv::threshold(grayImg, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
+
+	// 对二值化图像进行膨胀操作（重要！！！）
+	// 目标：通过调整Size参数，让身份证号码区域连接成一个整体，便于后续的裁剪
+	Mat kernel = cv::getStructuringElement(MORPH_RECT, Size(26, 26));
+	Mat dilation;
+	cv::dilate(binary, dilation, kernel);
+	//imshow("ID Card - dilation", dilation);
+
+	// 在膨胀后的图像中查找轮廓
+	std::vector<std::vector<Point>> contours;
+	std::vector<Vec4i> hierarchy;
+	cv::findContours(dilation, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+	// 遍历轮廓进行筛选
+	for (size_t i = 0; i < contours.size(); i++) {
+		double area = cv::contourArea(contours[i]);
+		Rect roi = cv::boundingRect(contours[i]);
+#if 0		
+		std::cout << "轮廓 " << i << " 的面积：" << area << " 点数：" << contours[i].size() << std::endl;
+		for (size_t j = 0; j < contours[i].size(); j++) {
+			Point p = contours[i][j];
+			std::cout << "点坐标：(" << p.x << ", " << p.y << ")" << std::endl;
+		}
+#endif
+
+#if 0
+		// 队列中的轮廓逐个画出
+		if (i < 2) {
+			cv::drawContours(srcImage, contours, i, Scalar(0, 255, 0));
+		}
+#endif 	
+
+		double aspectRatio = (double)roi.width / roi.height;
+		// 假设身份证号码区域的面积较大且长宽比在一定范围内
+		// 根据实际情况调整这些阈值
+		if (area > 40000 && aspectRatio > 10) {
+			cv::rectangle(srcImage, roi, Scalar(0, 255, 0), 2);
+
+			Mat cropped = binary(roi);
+			imshow("ID Card - number only", cropped);
+
+			// 使用 Tesseract OCR
+
+			break;
+		}
+	}	
+
+	/*
+	// 使用 Tesseract OCR
+	tesseract::TessBaseAPI tess;
+	tess.Init(NULL, "eng", tesseract::OEM_DEFAULT);
+	tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
+	tess.SetImage((uchar*)binary.data, binary.cols, binary.rows, 1, binary.cols);
+
+	char* outText = tess.GetUTF8Text();
+	cout << "识别出的文本：" << outText << endl;
+
+	tess.End();
+	*/
+
+	imshow("ID Card", srcImage);
+}
+
+// 识别身份证号码
+void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
+{
+	_DetectIDCard_WithGoodDilation();
 }
