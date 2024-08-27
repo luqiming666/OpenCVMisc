@@ -37,7 +37,6 @@ private:
 	CString mSourceFile;
 
 private:
-	void DumpImageInfo();
 	void ShowOriginalImage();
 	void _FindObjectInImage();
 	void _DetectIDCard_WithGoodDilation();

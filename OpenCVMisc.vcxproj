@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -167,7 +167,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

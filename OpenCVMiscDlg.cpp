@@ -16,6 +16,17 @@
 
 using namespace cv;
 
+// Only works for Release configuration
+//#define _ENABLE_TESSERACT_
+
+#ifdef _ENABLE_TESSERACT_
+#include "baseapi.h" 
+#include "allheaders.h"
+
+#pragma comment(lib, "leptonica-1.84.1.lib")
+#pragma comment(lib, "tesseract54.lib")
+#endif // _ENABLE_TESSERACT_
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -24,6 +35,83 @@ using namespace cv;
 // 应用案例参考文章：https://blog.csdn.net/qq_28245087/article/details/131229053
 //
 Mat gSrcImg; // The original source image
+
+
+int GetBytesPerPixel(Mat& image)
+{
+	int depth = image.depth();
+	int channels = image.channels();
+
+	int bytesPerPixel;
+	switch (depth) {
+	case CV_8U:
+		bytesPerPixel = channels;
+		break;
+	case CV_8S:
+		bytesPerPixel = channels;
+		break;
+	case CV_16U:
+		bytesPerPixel = channels * 2;
+		break;
+	case CV_16S:
+		bytesPerPixel = channels * 2;
+		break;
+	case CV_32S:
+		bytesPerPixel = channels * 4;
+		break;
+	case CV_32F:
+		bytesPerPixel = channels * 4;
+		break;
+	case CV_64F:
+		bytesPerPixel = channels * 8;
+		break;
+	default:
+		bytesPerPixel = 0;
+		break;
+	}
+	return bytesPerPixel;
+}
+
+const char* GetTypeName(Mat& image)
+{
+	int type = image.type();
+	// 一些常见的type值
+	switch (type) {
+	case CV_8UC1:
+		return "CV_8UC1"; // 8 位无符号整数，1 通道，即灰度图像
+	case CV_8UC3:
+		return "CV_8UC3"; // 8 位无符号整数，3 通道，通常表示 BGR 彩色图像
+	case CV_16UC1:
+		return "CV_16UC1"; // 16 位无符号整数，1 通道
+	case CV_16UC3:
+		return "CV_16UC3"; // 16 位无符号整数，3 通道
+	case CV_16SC1:
+		return "CV_16SC1"; // 16 位有符号整数，1 通道
+	case CV_16SC3:
+		return "CV_16SC3"; // 16 位有符号整数，3 通道
+	case CV_32FC1:
+		return "CV_32FC1"; // 32 位浮点数，1 通道
+	case CV_32FC3:
+		return "CV_32FC3"; // 32 位浮点数，3 通道
+	case CV_64FC1:
+		return "CV_64FC1"; // 64 位浮点数，1 通道
+	case CV_64FC3:
+		return "CV_64FC3"; // 64 位浮点数，3 通道
+	default:
+		return "default";
+	}
+}
+
+void DumpImageInfo(Mat& image, const char* tag = NULL)
+{
+	if (tag) {
+		std::cout << "Dumping image info for " << tag << std::endl;
+	}
+	std::cout << "Width: " << image.cols << " height: " << image.rows << " channels: " << image.channels() << std::endl;
+	std::cout << "Type: " << image.type() << " which means " << GetTypeName(image) << std::endl;
+	std::cout << "Depth: " << image.depth() << " and then we can calculate bytes-per-pixel: " << GetBytesPerPixel(image) << std::endl;
+	std::cout << "Mean: " << cv::mean(image) << std::endl;
+}
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -79,7 +167,7 @@ COpenCVMiscDlg::COpenCVMiscDlg(CWnd* pParent /*=nullptr*/)
 #ifdef DEBUG
 	mSourceFile = _T("D:\\Dev\\GitHub\\OpenCVMisc\\assets\\puppy.png");
 	gSrcImg = imread((LPCTSTR)mSourceFile, IMREAD_COLOR);
-	DumpImageInfo();
+	DumpImageInfo(gSrcImg, mSourceFile);
 #endif // DEBUG
 }
 
@@ -217,7 +305,7 @@ void COpenCVMiscDlg::OnBnClickedButtonBrowse()
 		}
 
 		ShowOriginalImage();
-		DumpImageInfo();
+		DumpImageInfo(gSrcImg, mSourceFile);
 	}
 }
 
@@ -229,15 +317,6 @@ void COpenCVMiscDlg::OnBnClickedButtonShowOriginal()
 void COpenCVMiscDlg::OnBnClickedButtonCloseAllWin()
 {
 	cv::destroyAllWindows();
-}
-
-void COpenCVMiscDlg::DumpImageInfo()
-{
-	if (mSourceFile.IsEmpty()) return;
-
-	std::cout << "Source file: " << mSourceFile << std::endl;
-	std::cout << "[Format] width: " << gSrcImg.cols << " height: " << gSrcImg.rows << " channels: " << gSrcImg.channels() << " type: " << gSrcImg.type() << std::endl;
-	std::cout << "Mean: " << cv::mean(gSrcImg) << std::endl;
 }
 
 void COpenCVMiscDlg::ShowOriginalImage()
@@ -649,20 +728,8 @@ void COpenCVMiscDlg::_DetectIDCard_WithBadDilation()
 		imshow("ID Card - number only", cropped);
 
 		// 使用 Tesseract OCR
+		// 参见_DetectIDCard_WithGoodDilation()的实现
 	}
-
-	/*
-	// 使用 Tesseract OCR
-	tesseract::TessBaseAPI tess;
-	tess.Init(NULL, "eng", tesseract::OEM_DEFAULT);
-	tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
-	tess.SetImage((uchar*)binary.data, binary.cols, binary.rows, 1, binary.cols);
-
-	char* outText = tess.GetUTF8Text();
-	cout << "识别出的文本：" << outText << endl;
-
-	tess.End();
-	*/
 
 	imshow("ID Card", srcImage);
 }
@@ -675,6 +742,7 @@ void COpenCVMiscDlg::_DetectIDCard_WithGoodDilation()
 	// 将图像转换为灰度图
 	Mat grayImg;
 	cv::cvtColor(srcImage, grayImg, COLOR_BGR2GRAY);
+	//DumpImageInfo(grayImg, "gray image");
 
 	// 对灰度图像进行二值化处理（注：THRESH_OTSU会自动选择最优的阈值 而忽略函数参数指定的阈值）
 	Mat binary;
@@ -707,7 +775,8 @@ void COpenCVMiscDlg::_DetectIDCard_WithGoodDilation()
 #if 0
 		// 队列中的轮廓逐个画出
 		if (i < 2) {
-			cv::drawContours(srcImage, contours, i, Scalar(0, 255, 0));
+			//cv::drawContours(srcImage, contours, i, Scalar(0, 255, 0));
+			cv::rectangle(srcImage, roi, Scalar(0, 255, 0), 2);
 		}
 #endif 	
 
@@ -721,23 +790,31 @@ void COpenCVMiscDlg::_DetectIDCard_WithGoodDilation()
 			imshow("ID Card - number only", cropped);
 
 			// 使用 Tesseract OCR
+#ifdef _ENABLE_TESSERACT_
+			tesseract::TessBaseAPI tess;
+			if (tess.Init("tessdata", "eng") == 0) {
+				tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
+
+				// Tesseract只支持输入 24bit 图像？
+				Mat ocrImg;
+				cv::cvtColor(cropped, ocrImg, COLOR_GRAY2BGR);
+				//imshow("ID Card - image for OCR", ocrImg);
+				//DumpImageInfo(ocrImg, "OCR");
+				int bytesPerPixel = GetBytesPerPixel(ocrImg);
+				tess.SetImage((uchar*)ocrImg.data, ocrImg.cols, ocrImg.rows, bytesPerPixel, ocrImg.cols * bytesPerPixel);
+
+				char* outText = tess.GetUTF8Text();
+				std::cout << "ID numbers: " << outText << std::endl;
+				delete[] outText;
+
+				tess.End();
+			}
+			
+#endif // _ENABLE_TESSERACT_
 
 			break;
 		}
-	}	
-
-	/*
-	// 使用 Tesseract OCR
-	tesseract::TessBaseAPI tess;
-	tess.Init(NULL, "eng", tesseract::OEM_DEFAULT);
-	tess.SetPageSegMode(tesseract::PSM_SINGLE_BLOCK);
-	tess.SetImage((uchar*)binary.data, binary.cols, binary.rows, 1, binary.cols);
-
-	char* outText = tess.GetUTF8Text();
-	cout << "识别出的文本：" << outText << endl;
-
-	tess.End();
-	*/
+	}
 
 	imshow("ID Card", srcImage);
 }
