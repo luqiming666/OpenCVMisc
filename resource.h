@@ -24,6 +24,8 @@
 #define IDC_BUTTON_ROTATE               1013
 #define IDC_BUTTON_SCAN_ID_CARD         1014
 #define IDC_BUTTON_MORPHOLOGY           1015
+#define IDC_BUTTON_SCAN_ID_CARD2        1016
+#define IDC_BUTTON_DETECT_FACE          1016
 
 // Next default values for new objects
 // 

@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include;..\opencv\modules\objdetect\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -167,13 +167,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\leptonica\src;..\leptonica\build\src;..\tesseract\include\tesseract;..\tesseract\build\include;..\opencv\include;..\opencv\build;..\opencv\modules\core\include;..\opencv\modules\highgui\include;..\opencv\modules\imgcodecs\include;..\opencv\modules\videoio\include;..\opencv\modules\imgproc\include;..\opencv\modules\objdetect\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>..\opencv\build\lib\Release\opencv_core4100.lib;..\opencv\build\lib\Release\opencv_highgui4100.lib;..\opencv\build\lib\Release\opencv_imgproc4100.lib;..\opencv\build\lib\Release\opencv_imgcodecs4100.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\opencv\build\lib\Release\opencv_core4100.lib;..\opencv\build\lib\Release\opencv_highgui4100.lib;..\opencv\build\lib\Release\opencv_imgproc4100.lib;..\opencv\build\lib\Release\opencv_imgcodecs4100.lib;..\opencv\build\lib\Release\opencv_objdetect4100.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

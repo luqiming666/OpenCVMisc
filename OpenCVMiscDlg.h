@@ -58,4 +58,5 @@ public:
 	afx_msg void OnBnClickedButtonFindObject();
 	afx_msg void OnBnClickedButtonScanIdCard();
 	afx_msg void OnBnClickedButtonMorphology();
+	afx_msg void OnBnClickedButtonDetectFace();
 };

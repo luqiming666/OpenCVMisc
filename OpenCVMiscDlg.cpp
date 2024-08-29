@@ -13,6 +13,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
 
 using namespace cv;
 
@@ -32,6 +33,7 @@ using namespace cv;
 #endif
 
 // OpenCV documentation: https://docs.opencv.org/4.x/index.html
+// 基础概念，e.g. Mat - https://docs.opencv.org/4.10.0/d6/d6d/tutorial_mat_the_basic_image_container.html
 // 应用案例参考文章：https://blog.csdn.net/qq_28245087/article/details/131229053
 //
 Mat gSrcImg; // The original source image
@@ -197,6 +199,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT, &COpenCVMiscDlg::OnBnClickedButtonFindObject)
 	ON_BN_CLICKED(IDC_BUTTON_SCAN_ID_CARD, &COpenCVMiscDlg::OnBnClickedButtonScanIdCard)
 	ON_BN_CLICKED(IDC_BUTTON_MORPHOLOGY, &COpenCVMiscDlg::OnBnClickedButtonMorphology)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_FACE, &COpenCVMiscDlg::OnBnClickedButtonDetectFace)
 END_MESSAGE_MAP()
 
 
@@ -823,4 +826,31 @@ void COpenCVMiscDlg::_DetectIDCard_WithGoodDilation()
 void COpenCVMiscDlg::OnBnClickedButtonScanIdCard()
 {
 	_DetectIDCard_WithGoodDilation();
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
+{
+	cv::CascadeClassifier faceClassifier;
+	// 加载级联分类器
+	if (!faceClassifier.load(".\\assets\\haarcascade_frontalface_alt.xml")) {
+		std::cout << "Failed to load classifier." << std::endl;
+		return;
+	}
+
+	Mat srcImage = imread(".\\assets\\ruok.png");
+	if (srcImage.empty()) return;
+
+	// 灰度化处理
+	Mat gray;
+	cv::cvtColor(srcImage, gray, COLOR_BGR2GRAY);
+	// 直方图均衡化，增强对比度
+	cv::equalizeHist(gray, gray);
+
+	std::vector<Rect> faces;
+	faceClassifier.detectMultiScale(gray, faces);
+	for each (Rect face in faces) {
+		cv::rectangle(srcImage, face, Scalar(0, 255, 0));
+	}
+
+	imshow("Face Detection", srcImage);
 }
