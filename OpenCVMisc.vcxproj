@@ -119,7 +119,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>..\opencv\build\lib\Debug\opencv_core4100d.lib;..\opencv\build\lib\Debug\opencv_highgui4100d.lib;..\opencv\build\lib\Debug\opencv_imgproc4100d.lib;..\opencv\build\lib\Debug\opencv_imgcodecs4100d.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\opencv\build\lib\Debug\opencv_core4100d.lib;..\opencv\build\lib\Debug\opencv_highgui4100d.lib;..\opencv\build\lib\Debug\opencv_imgproc4100d.lib;..\opencv\build\lib\Debug\opencv_imgcodecs4100d.lib;..\opencv\build\lib\Debug\opencv_objdetect4100d.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

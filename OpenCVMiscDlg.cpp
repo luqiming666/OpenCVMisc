@@ -404,9 +404,12 @@ void COpenCVMiscDlg::OnBnClickedButtonBlend2Images()
 // https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html
 void COpenCVMiscDlg::OnBnClickedButtonGrayscale()
 {
+	if (gSrcImg.empty()) return;
+
 	Mat grey;
 	cv::cvtColor(gSrcImg, grey, COLOR_BGR2GRAY);
 	imshow("Grayscale", grey);
+	//std::cout << "M = " << std::endl << grey << std::endl;
 
 	// 对灰度图像进行二值化处理（即为黑白图像）
 	// 工作原理：
@@ -832,6 +835,8 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
 {
 	cv::CascadeClassifier faceClassifier;
 	// 加载级联分类器
+	// load haarcascade_eye.xml for detecting eyes
+	// load haarcascade_frontalcatface.xml for detecting cat's face: cat.png
 	if (!faceClassifier.load(".\\assets\\haarcascade_frontalface_alt.xml")) {
 		std::cout << "Failed to load classifier." << std::endl;
 		return;
