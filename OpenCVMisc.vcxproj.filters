@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{3b8dd5d0-7b16-498b-8e07-0b92fde747c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OpenCVMisc.h">
@@ -36,6 +39,9 @@
     <ClInclude Include="CAutoTicker.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="BtnST.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OpenCVMisc.cpp">
@@ -46,6 +52,9 @@
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BtnST.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -60,6 +69,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\OpenCVMisc.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\lab.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

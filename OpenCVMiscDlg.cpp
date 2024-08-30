@@ -3,7 +3,6 @@
 //
 
 #include "pch.h"
-#include "framework.h"
 #include "OpenCVMisc.h"
 #include "OpenCVMiscDlg.h"
 #include "afxdialogex.h"
@@ -74,6 +73,7 @@ int GetBytesPerPixel(Mat& image)
 	return bytesPerPixel;
 }
 
+// CV_[The number of bits per item][Signed or Unsigned][Type Prefix]C[The channel number]
 const char* GetTypeName(Mat& image)
 {
 	int type = image.type();
@@ -81,8 +81,12 @@ const char* GetTypeName(Mat& image)
 	switch (type) {
 	case CV_8UC1:
 		return "CV_8UC1"; // 8 位无符号整数，1 通道，即灰度图像
+	case CV_8UC2:
+		return "CV_8UC2"; // 8 位无符号整数，2 通道
 	case CV_8UC3:
 		return "CV_8UC3"; // 8 位无符号整数，3 通道，通常表示 BGR 彩色图像
+	case CV_8UC4:
+		return "CV_8UC4"; // 8 位无符号整数，4 通道
 	case CV_16UC1:
 		return "CV_16UC1"; // 16 位无符号整数，1 通道
 	case CV_16UC3:
@@ -107,8 +111,23 @@ const char* GetTypeName(Mat& image)
 void DumpImageInfo(Mat& image, const char* tag = NULL)
 {
 	if (tag) {
-		std::cout << "Dumping image info for " << tag << std::endl;
+		std::cout << "Dumping image info for " << tag << "..." << std::endl;
 	}
+	if (image.empty()) {
+		std::cout << "The image is empty!" << std::endl;
+		return;
+	}
+
+	std::cout << "Dimensions: " << image.dims;
+	if (image.dims >= 2) {
+		std::cout << " Size: ";
+		for (int i = 0; i < image.dims; i++) {
+			std::cout << image.size[i];
+			if (i != image.dims - 1) std::cout << " x ";
+		}
+		std::cout << std::endl;
+	}	
+
 	std::cout << "Width: " << image.cols << " height: " << image.rows << " channels: " << image.channels() << std::endl;
 	std::cout << "Type: " << image.type() << " which means " << GetTypeName(image) << std::endl;
 	std::cout << "Depth: " << image.depth() << " and then we can calculate bytes-per-pixel: " << GetBytesPerPixel(image) << std::endl;
@@ -200,6 +219,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SCAN_ID_CARD, &COpenCVMiscDlg::OnBnClickedButtonScanIdCard)
 	ON_BN_CLICKED(IDC_BUTTON_MORPHOLOGY, &COpenCVMiscDlg::OnBnClickedButtonMorphology)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_FACE, &COpenCVMiscDlg::OnBnClickedButtonDetectFace)
+	ON_BN_CLICKED(IDC_BUTTON_BASIC, &COpenCVMiscDlg::OnBnClickedButtonBasic)
 END_MESSAGE_MAP()
 
 
@@ -233,6 +253,10 @@ BOOL COpenCVMiscDlg::OnInitDialog()
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
+
+	mBtnBasic.SubclassDlgItem(IDC_BUTTON_BASIC, this); // 定制按钮
+	mBtnBasic.SetIcon(IDI_ICON_LAB);
+	mBtnBasic.SizeToContent();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -320,6 +344,125 @@ void COpenCVMiscDlg::OnBnClickedButtonShowOriginal()
 void COpenCVMiscDlg::OnBnClickedButtonCloseAllWin()
 {
 	cv::destroyAllWindows();
+}
+
+Mat& ScanImageAndReduceC(Mat& I, const uchar* const table)
+{
+	// accept only char type matrices
+	CV_Assert(I.depth() == CV_8U);
+
+	int channels = I.channels();
+
+	int nRows = I.rows;
+	int nCols = I.cols * channels;
+
+	// Mat中存储的数据 行与行之间在内存上未必是连续的。如果是连续的（可以通过Mat::isContinuous来判断），可以提升处理性能
+	if (I.isContinuous())
+	{
+		nCols *= nRows;
+		nRows = 1;
+	}
+
+	int i, j;
+	uchar* p;
+	for (i = 0; i < nRows; ++i)
+	{
+		p = I.ptr<uchar>(i);
+		for (j = 0; j < nCols; ++j)
+		{
+			p[j] = table[p[j]];
+		}
+	}
+	return I;
+}
+
+Mat& ScanImageAndReduceIterator(Mat& I, const uchar* const table)
+{
+	// accept only char type matrices
+	CV_Assert(I.depth() == CV_8U);
+
+	const int channels = I.channels();
+	switch (channels)
+	{
+	case 1:
+	{
+		MatIterator_<uchar> it, end;
+		for (it = I.begin<uchar>(), end = I.end<uchar>(); it != end; ++it)
+			*it = table[*it];
+		break;
+	}
+	case 3:
+	{
+		MatIterator_<Vec3b> it, end;
+		for (it = I.begin<Vec3b>(), end = I.end<Vec3b>(); it != end; ++it)
+		{
+			(*it)[0] = table[(*it)[0]];
+			(*it)[1] = table[(*it)[1]];
+			(*it)[2] = table[(*it)[2]];
+		}
+	}
+	}
+
+	return I;
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonBasic()
+{
+	Mat matrix1;
+	matrix1.create(4, 4, CV_8UC(2)); // 4行，4列，8bit-2通道
+	std::cout << "M = " << std::endl << matrix1 << std::endl;
+	cv::randu(matrix1, Scalar::all(0), Scalar::all(255)); // 随机数
+	std::cout << "M filled with random numbers >>> " << std::endl << matrix1 << std::endl;
+
+	// 2x2x2 的三维矩阵
+	int sz[] = { 2, 2, 2 };
+	Mat matrix2(3, sz, CV_8UC(1), Scalar::all(0));
+	DumpImageInfo(matrix2, "Basic Matrix");
+
+	// MATLAB style initializer: cv::Mat::zeros , cv::Mat::ones , cv::Mat::eye 
+	Mat E = Mat::eye(4, 4, CV_64F);
+	std::cout << "E = " << std::endl << E << std::endl;
+	Mat Z = Mat::zeros(3, 3, CV_8UC1);
+	std::cout << "Z = " << std::endl << Z << std::endl;
+	Mat O = Mat::ones(2, 2, CV_32F);
+	std::cout << "O = " << std::endl << O << std::endl;
+
+	Mat C = (Mat_<double>(3, 3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
+	std::cout << "C = " << std::endl << C << std::endl;
+	Mat RowClone = C.row(1).clone(); // 克隆C的第二行
+	std::cout << "The 2nd row of C cloned >>> " << std::endl << RowClone << std::endl;
+
+	///////////////////////////////////////////
+	// 演练：go through an image pixel by pixel
+	// 通过"查表"替换图像中的每个像素值
+	uchar table[256];
+	for (int i = 0; i < 256; ++i)
+		table[i] = (uchar)(30 * (i / 30)); // 减少颜色数量
+
+	Mat testImage = imread(".\\assets\\cat.png");
+	imshow("TestImage - Original", testImage);
+
+	// how do we measure time? 
+	double t = (double)cv::getTickCount();
+	// do something ...
+	ScanImageAndReduceC(testImage, table);
+	t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+	std::cout << "Times passed in seconds: " << t << std::endl;
+	imshow("TestImage - Color reduction", testImage);
+
+	testImage = imread(".\\assets\\cat.png");
+	Mat result;
+	// 使用OpenCV内置的查表函数，效率更高！
+	Mat lookUpTable(1, 256, CV_8U);
+	uchar* p = lookUpTable.ptr();
+	for (int i = 0; i < 256; ++i)
+		p[i] = table[i];
+	t = (double)cv::getTickCount();
+	cv::LUT(testImage, lookUpTable, result);
+	t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+	std::cout << "Times passed in seconds (LUT): " << t << std::endl;
+	imshow("TestImage - Color reduction - LUT", result);
+	
 }
 
 void COpenCVMiscDlg::ShowOriginalImage()

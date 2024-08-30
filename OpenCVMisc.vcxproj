@@ -187,6 +187,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BtnST.h" />
     <ClInclude Include="CAutoTicker.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="OpenCVMisc.h" />
@@ -196,6 +197,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BtnST.cpp" />
     <ClCompile Include="OpenCVMisc.cpp" />
     <ClCompile Include="OpenCVMiscDlg.cpp" />
     <ClCompile Include="pch.cpp">
@@ -212,6 +214,7 @@
     <None Include="res\OpenCVMisc.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\lab.ico" />
     <Image Include="res\OpenCVMisc.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

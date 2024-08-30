@@ -7,6 +7,8 @@
 #define IDS_ABOUTBOX                    101
 #define IDD_OPENCVMISC_DIALOG           102
 #define IDR_MAINFRAME                   128
+#define IDI_ICON1                       130
+#define IDI_ICON_LAB                    130
 #define IDC_EDIT_SOURCE_FILE            1000
 #define IDC_BUTTON_BROWSE               1001
 #define IDC_BUTTON_CLOSE_ALL_WIN        1002
@@ -24,14 +26,14 @@
 #define IDC_BUTTON_ROTATE               1013
 #define IDC_BUTTON_SCAN_ID_CARD         1014
 #define IDC_BUTTON_MORPHOLOGY           1015
-#define IDC_BUTTON_SCAN_ID_CARD2        1016
 #define IDC_BUTTON_DETECT_FACE          1016
+#define IDC_BUTTON_BASIC                1017
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        129
+#define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1004
 #define _APS_NEXT_SYMED_VALUE           101

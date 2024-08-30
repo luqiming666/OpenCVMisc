@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "BtnST.h" // https://www.codeproject.com/Articles/57/CButtonST-v3-9-MFC-Flat-buttons
 
 // COpenCVMiscDlg 对话框
 class COpenCVMiscDlg : public CDialogEx
@@ -35,6 +36,7 @@ protected:
 
 private:
 	CString mSourceFile;
+	CButtonST mBtnBasic;
 
 private:
 	void ShowOriginalImage();
@@ -59,4 +61,5 @@ public:
 	afx_msg void OnBnClickedButtonScanIdCard();
 	afx_msg void OnBnClickedButtonMorphology();
 	afx_msg void OnBnClickedButtonDetectFace();
+	afx_msg void OnBnClickedButtonBasic();
 };
