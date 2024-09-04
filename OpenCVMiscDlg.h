@@ -41,6 +41,7 @@ private:
 private:
 	void ShowOriginalImage();
 	void _FindObjectInImage();
+	void _FindImageMatches();
 	void _DetectIDCard_WithGoodDilation();
 	void _DetectIDCard_WithBadDilation();
 
@@ -62,4 +63,6 @@ public:
 	afx_msg void OnBnClickedButtonMorphology();
 	afx_msg void OnBnClickedButtonDetectFace();
 	afx_msg void OnBnClickedButtonBasic();
+	afx_msg void OnBnClickedButtonDetectCorners();
+	afx_msg void OnBnClickedButtonFindObjectSift();
 };

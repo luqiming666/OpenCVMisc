@@ -13,6 +13,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
+#include <opencv2/features2d.hpp>
 
 using namespace cv;
 
@@ -220,6 +221,8 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_MORPHOLOGY, &COpenCVMiscDlg::OnBnClickedButtonMorphology)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_FACE, &COpenCVMiscDlg::OnBnClickedButtonDetectFace)
 	ON_BN_CLICKED(IDC_BUTTON_BASIC, &COpenCVMiscDlg::OnBnClickedButtonBasic)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_CORNERS, &COpenCVMiscDlg::OnBnClickedButtonDetectCorners)
+	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT_SIFT, &COpenCVMiscDlg::OnBnClickedButtonFindObjectSift)
 END_MESSAGE_MAP()
 
 
@@ -411,8 +414,14 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	Mat matrix1;
 	matrix1.create(4, 4, CV_8UC(2)); // 4行，4列，8bit-2通道
 	std::cout << "M = " << std::endl << matrix1 << std::endl;
+
 	cv::randu(matrix1, Scalar::all(0), Scalar::all(255)); // 随机数
 	std::cout << "M filled with random numbers >>> " << std::endl << matrix1 << std::endl;
+	matrix1.row(0).setTo(Scalar(0));
+	std::cout << "The first row set to 0 >>> " << std::endl << matrix1 << std::endl;
+	matrix1.col(matrix1.cols-1).setTo(Scalar(0));
+	std::cout << "The last column set to 0 >>> " << std::endl << matrix1 << std::endl;
+	std::cout << std::endl;
 
 	// 2x2x2 的三维矩阵
 	int sz[] = { 2, 2, 2 };
@@ -427,20 +436,54 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	Mat O = Mat::ones(2, 2, CV_32F);
 	std::cout << "O = " << std::endl << O << std::endl;
 
-	Mat C = (Mat_<double>(3, 3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
+	Mat C = (Mat_<double>(3, 3) << 0, -1, 0,
+								   -1, 5, -1,
+								   0, -1, 0);
 	std::cout << "C = " << std::endl << C << std::endl;
 	Mat RowClone = C.row(1).clone(); // 克隆C的第二行
 	std::cout << "The 2nd row of C cloned >>> " << std::endl << RowClone << std::endl;
 
-	///////////////////////////////////////////
+#if 0 // 测试自建图像
+	Mat myImg;
+	myImg.create(300, 300, CV_8UC(3)); // 自建 300x300 BGR图像
+	myImg = Scalar(0); // 黑图
+	imshow("Creat an image - Black", myImg);
+	cv::randu(myImg, Scalar::all(0), Scalar::all(255)); // 随机数
+	imshow("Creat an image - Random", myImg);
+	Rect roi(10, 10, 100, 100);
+	Mat smallImg = myImg(roi);
+	imshow("Creat an image - ROI (Region Of Interest)", smallImg);
+#endif 
+
+
+	/////////////////////////////////////////////////////////////////////////////////
 	// 演练：go through an image pixel by pixel
 	// 通过"查表"替换图像中的每个像素值
 	uchar table[256];
 	for (int i = 0; i < 256; ++i)
 		table[i] = (uchar)(30 * (i / 30)); // 减少颜色数量
 
-	Mat testImage = imread(".\\assets\\cat.png");
+	Mat srcImage = imread(".\\assets\\cat.png");
+	Mat testImage = srcImage.clone();
 	imshow("TestImage - Original", testImage);
+
+#if 0 // 练习：随机访问像素点(x, y)，注意C++中的坐标点与OpenCV的行/列的对应详细
+	int channelCount = testImage.channels();
+	int x = 1;
+	int y = 2;
+	if (channelCount == 1) {
+		Scalar intensity1 = testImage.at<uchar>(y, x);
+		// 等价于：
+		Scalar intensity2 = testImage.at<uchar>(Point(x, y));
+	}
+	else if (channelCount == 3) { // BRG
+		Vec3b intensity = testImage.at<Vec3b>(y, x);
+		uchar blue = intensity.val[0];
+		uchar green = intensity.val[1];
+		uchar red = intensity.val[2];
+	}
+#endif // 1 // 练习：随机访问像素点
+
 
 	// how do we measure time? 
 	double t = (double)cv::getTickCount();
@@ -450,7 +493,7 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	std::cout << "Times passed in seconds: " << t << std::endl;
 	imshow("TestImage - Color reduction", testImage);
 
-	testImage = imread(".\\assets\\cat.png");
+	Mat testI2 = srcImage.clone();
 	Mat result;
 	// 使用OpenCV内置的查表函数，效率更高！
 	Mat lookUpTable(1, 256, CV_8U);
@@ -458,7 +501,7 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	for (int i = 0; i < 256; ++i)
 		p[i] = table[i];
 	t = (double)cv::getTickCount();
-	cv::LUT(testImage, lookUpTable, result);
+	cv::LUT(testI2, lookUpTable, result);
 	t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
 	std::cout << "Times passed in seconds (LUT): " << t << std::endl;
 	imshow("TestImage - Color reduction - LUT", result);
@@ -607,6 +650,23 @@ void COpenCVMiscDlg::OnBnClickedButtonBlur()
 	}
 	hconcat(gSrcImg, newImage, blur_merged);
 	imshow("Blur-4 (original vs. boxFilter)", blur_merged);
+
+
+	// 测试filter2D，通过一个kernal / mask 让每个像素与周围的像素进行运算
+	// 均值滤波核
+	Mat kernel_mean = Mat::ones(5, 5, CV_32F) / 25.0;
+	std::cout << "kernel_mean = " << std::endl << kernel_mean << std::endl;
+	Mat filtered1;
+	filter2D(gSrcImg, filtered1, -1, kernel_mean);
+	imshow("filter2D-1 blur", filtered1);
+
+	// 拉普拉斯边缘检测核
+	Mat kernel_laplacian = (Mat_<float>(3, 3) << 0, -1, 0, 
+												-1, 4, -1,
+												0, -1, 0);
+	Mat filtered2;
+	filter2D(gSrcImg, filtered2, -1, kernel_laplacian);
+	imshow("filter2D-2 edge", filtered2);
 }
 
 void COpenCVMiscDlg::OnBnClickedButtonbilateralfilter()
@@ -739,6 +799,26 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectEdge()
 	cv::Sobel(srcGray, sobely, CV_64F, 0, 1, 5);
 	cv::addWeighted(sobelx, 0.5, sobely, 0.5, 0, sobelImage);
 	imshow("Edges - Sobel", sobelImage);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonDetectCorners()
+{
+	if (mSourceFile.IsEmpty()) return;
+
+	Mat srcImage = imread((LPCTSTR)mSourceFile);
+	if (srcImage.empty()) return;
+
+	Mat srcGray;
+	cv::cvtColor(srcImage, srcGray, COLOR_BGR2GRAY);
+
+	std::vector<Point2f> corners;
+	cv::goodFeaturesToTrack(srcGray, corners, 100, 0.01, 10);
+	// 绘制角点
+	for (const Point2f& corner : corners) {
+		cv::circle(srcImage, corner, 3, Scalar(0, 255, 0), -1);
+	}
+
+	imshow("Corners", srcImage);
 }
 
 
@@ -1001,4 +1081,86 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
 	}
 
 	imshow("Face Detection", srcImage);
+}
+
+/*
+* SIFT（Scale-Invariant Feature Transform，尺度不变特征变换）算法
+* 即使物体在图像中的大小、方向、光照条件不同，SIFT 算法也能提取出稳定的特征，从而实现准确识别。
+* 典型应用：图像识别与分类、图像拼接（e.g.全景图）、医学影像处理（CT 扫描、MRI图像中的病变检测）、文物保护与修复（碎片拼接）、机器人视觉
+* 
+* DMatch结构用于表示两个特征点之间的匹配关系，成员变量释义：
+* - queryIdx：表示查询图像中特征点的索引。在特征匹配过程中，通常有两幅图像，一幅被称为查询图像（query image），另一幅被称为训练图像（train image）。这个索引指向查询图像中被匹配的特征点在特征点容器中的位置。
+* - trainIdx：表示训练图像中特征点的索引。指向训练图像中与查询图像中的特征点相匹配的特征点在特征点容器中的位置。
+* - imgIdx：在多幅图像匹配的情况下，表示匹配的特征点所在的图像索引。如果只对两幅图像进行匹配，这个变量通常不被使用。
+* - distance：表示两个特征点描述子之间的距离。距离越小，说明两个特征点越相似，匹配度越高。通常使用某种距离度量方法，如欧氏距离或汉明距离，来计算描述子之间的距离。
+*/
+void COpenCVMiscDlg::_FindImageMatches()
+{
+	Mat img1, img2;
+	img1 = imread(".\\assets\\wukong.jpg");
+	img2 = imread(".\\assets\\bsl2.png"); // 与源图像的分辨率可以不同
+	if (img1.empty() || img2.empty()) return;
+
+	// 创建 SIFT 特征检测器
+	cv::Ptr<SIFT> sift = SIFT::create();
+
+	// 检测关键点和计算描述子
+	std::vector<KeyPoint> keypoints1, keypoints2;
+	Mat descriptors1, descriptors2;
+	sift->detectAndCompute(img1, noArray(), keypoints1, descriptors1);
+	sift->detectAndCompute(img2, noArray(), keypoints2, descriptors2);
+
+	// 创建特征匹配器
+	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+
+	// 匹配特征点
+	// {外层向量}的每一个元素对应查询图像中的一个特征点；
+	// 对于每个查询特征点，{内层向量}存储了该点与训练图像中特征点的一组最近邻匹配结果，数量由参数k决定
+	std::vector<std::vector<DMatch>> knnMatches;
+	matcher->knnMatch(descriptors1, descriptors2, knnMatches, 2); // 内层向量中存储2个最接近的匹配结果
+	std::cout << "The total number of matches: " << knnMatches.size() << std::endl;
+
+	// 筛选好的匹配点
+	// 距离越小，说明两个特征点越相似，匹配度越高。
+	const float ratioThreshold = 0.50f;
+	std::vector<DMatch> goodMatches;
+	for (size_t i = 0; i < knnMatches.size(); i++) {
+		if (knnMatches[i][0].distance < ratioThreshold * knnMatches[i][1].distance) {
+			goodMatches.push_back(knnMatches[i][0]);
+		}
+	}
+	std::cout << "The count of good matches: " << goodMatches.size() << std::endl;
+
+	// 尝试绘制矩形区域
+	std::vector<Point2f> points1, points2;
+	for (const DMatch& match : goodMatches) {
+		points1.push_back(keypoints1[match.queryIdx].pt);
+		points2.push_back(keypoints2[match.trainIdx].pt);
+	}
+	if (!points1.empty() && !points2.empty() && goodMatches.size() > 50) { // 通过好点数量来判断是否真的匹配，须依据实际情况修改！
+		// 获取最小包围矩形
+		Rect rect1 = cv::boundingRect(points1);
+		Rect rect2 = cv::boundingRect(points2);
+
+		cv::rectangle(img1, rect1, Scalar(0, 255, 0), 2);
+		cv::rectangle(img2, rect2, Scalar(0, 255, 0), 2);
+		//imshow("Matches - Image1", img1);
+		//imshow("Matches - Image2", img2);
+		std::cout << "Found matches successfully." << std::endl;
+	}
+	else {
+		std::cout << "It is NOT a good match!" << std::endl;
+	}
+
+	// 绘制匹配结果
+	Mat imgMatches;
+	cv::drawMatches(img1, keypoints1, img2, keypoints2, goodMatches, imgMatches, Scalar::all(-1),
+		Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+	imshow("SIFT matches", imgMatches);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonFindObjectSift()
+{
+	CAutoTicker ticker("FindObject - SIFT");
+	_FindImageMatches();
 }

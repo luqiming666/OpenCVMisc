@@ -28,6 +28,8 @@
 #define IDC_BUTTON_MORPHOLOGY           1015
 #define IDC_BUTTON_DETECT_FACE          1016
 #define IDC_BUTTON_BASIC                1017
+#define IDC_BUTTON_DETECT_CORNERS       1018
+#define IDC_BUTTON_FIND_OBJECT_SIFT     1019
 
 // Next default values for new objects
 // 
