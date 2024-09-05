@@ -224,6 +224,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_CORNERS, &COpenCVMiscDlg::OnBnClickedButtonDetectCorners)
 	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT_SIFT, &COpenCVMiscDlg::OnBnClickedButtonFindObjectSift)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_IN_VIDEO, &COpenCVMiscDlg::OnBnClickedButtonDetectInVideo)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_AND_TRACK, &COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack)
 END_MESSAGE_MAP()
 
 
@@ -1084,11 +1085,18 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
 	imshow("Face Detection", srcImage);
 }
 
+//#define _OPEN_CAMERA
 void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 {
+#ifdef _OPEN_CAMERA
+	cv::VideoCapture cap;
+	cap.open(0);
+#else
 	cv::VideoCapture cap(".\\assets\\perfectworld.mp4");
+#endif // _OPEN_CAMERA
+
 	if (!cap.isOpened()) {
-		std::cout << "Failed to open the source file." << std::endl;
+		std::cout << "Failed to open the source video." << std::endl;
 		return;
 	}
 
@@ -1117,7 +1125,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 
 		// 用矩形框标注人脸
 		for (const Rect& face : faces) {
-			rectangle(frame, face, Scalar(0, 255, 0), 2);
+			cv::rectangle(frame, face, Scalar(0, 255, 0), 2);
 		}
 
 		// 显示视频帧
@@ -1132,6 +1140,87 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 
 	// 释放资源
 	cap.release();
+}
+
+
+cv::Ptr<DetectionBasedTracker> tracker;
+class CascadeDetectorAdapter : public DetectionBasedTracker::IDetector
+{
+public:
+	CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector) :
+		IDetector(),
+		Detector(detector)
+	{
+		CV_Assert(detector);
+	}
+
+	~CascadeDetectorAdapter()
+	{
+	}
+
+	// 每张 Image 图片中都可能会有多张人脸 objects，因此可能会多次调用 detect 进行识别
+	void detect(const cv::Mat& Image, std::vector<cv::Rect>& objects)
+	{
+		Detector->detectMultiScale(Image, objects, scaleFactor, minNeighbours, 0, minObjSize, maxObjSize);
+	}
+
+private:
+	CascadeDetectorAdapter();
+	cv::Ptr<cv::CascadeClassifier> Detector;
+};
+
+// 优化实现：每次检测会导致视频卡顿，采用“检测+跟踪”策略 >> CPU使用率显著下降！
+void COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack()
+{
+	cv::VideoCapture cap(".\\assets\\perfectworld.mp4");
+	if (!cap.isOpened()) {
+		std::cout << "Failed to open the source video." << std::endl;
+		return;
+	}
+
+	cv::Ptr<CascadeDetectorAdapter> mainDetector = makePtr<CascadeDetectorAdapter>(
+		makePtr<CascadeClassifier>(".\\assets\\haarcascade_frontalface_alt.xml"));
+	// 2.2 创建跟踪检测适配器
+	cv::Ptr<CascadeDetectorAdapter> trackingDetector = makePtr<CascadeDetectorAdapter>(
+		makePtr<CascadeClassifier>(".\\assets\\haarcascade_frontalface_alt.xml"));
+	// 2.3 创建跟踪器
+	DetectionBasedTracker::Parameters DetectorParams;
+	tracker = makePtr<DetectionBasedTracker>(mainDetector, trackingDetector, DetectorParams);
+	// 2.4 开始检测
+	tracker->run();
+
+	const char szVideoWndName[] = "Video with Faces Detected - tracking";
+	Mat frame, gray;
+	while (true) {
+		cap >> frame;
+		if (frame.empty())
+			break;
+
+		cvtColor(frame, gray, COLOR_BGR2GRAY);
+
+		// 直方图均衡化，增强对比度
+		equalizeHist(gray, gray);
+
+		std::vector<Rect> faces;
+		tracker->process(gray);
+		tracker->getObjects(faces);
+
+		for (const Rect& face : faces) {
+			cv::rectangle(frame, face, Scalar(0, 255, 0), 2);
+		}
+
+		imshow(szVideoWndName, frame);
+
+		// 按下 ESC 键退出循环
+		if (waitKey(25) == 27) {
+			cv::destroyWindow(szVideoWndName);
+			break;
+		}
+	}
+
+	// 释放资源
+	cap.release();
+	tracker->stop();
 }
 
 /*
