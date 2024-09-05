@@ -119,7 +119,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>..\opencv\build\lib\Debug\opencv_core4100d.lib;..\opencv\build\lib\Debug\opencv_highgui4100d.lib;..\opencv\build\lib\Debug\opencv_imgproc4100d.lib;..\opencv\build\lib\Debug\opencv_imgcodecs4100d.lib;..\opencv\build\lib\Debug\opencv_objdetect4100d.lib;..\opencv\build\lib\Debug\opencv_features2d4100d.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\opencv\build\lib\Debug\opencv_core4100d.lib;..\opencv\build\lib\Debug\opencv_highgui4100d.lib;..\opencv\build\lib\Debug\opencv_imgproc4100d.lib;..\opencv\build\lib\Debug\opencv_imgcodecs4100d.lib;..\opencv\build\lib\Debug\opencv_objdetect4100d.lib;..\opencv\build\lib\Debug\opencv_features2d4100d.lib;..\opencv\build\lib\Debug\opencv_videoio4100d.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -173,7 +173,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>..\opencv\build\lib\Release\opencv_core4100.lib;..\opencv\build\lib\Release\opencv_highgui4100.lib;..\opencv\build\lib\Release\opencv_imgproc4100.lib;..\opencv\build\lib\Release\opencv_imgcodecs4100.lib;..\opencv\build\lib\Release\opencv_objdetect4100.lib;..\opencv\build\lib\Release\opencv_features2d4100.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\opencv\build\lib\Release\opencv_core4100.lib;..\opencv\build\lib\Release\opencv_highgui4100.lib;..\opencv\build\lib\Release\opencv_imgproc4100.lib;..\opencv\build\lib\Release\opencv_imgcodecs4100.lib;..\opencv\build\lib\Release\opencv_objdetect4100.lib;..\opencv\build\lib\Release\opencv_features2d4100.lib;..\opencv\build\lib\Release\opencv_videoio4100.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

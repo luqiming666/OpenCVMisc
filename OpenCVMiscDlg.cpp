@@ -223,6 +223,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_BASIC, &COpenCVMiscDlg::OnBnClickedButtonBasic)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_CORNERS, &COpenCVMiscDlg::OnBnClickedButtonDetectCorners)
 	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT_SIFT, &COpenCVMiscDlg::OnBnClickedButtonFindObjectSift)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_IN_VIDEO, &COpenCVMiscDlg::OnBnClickedButtonDetectInVideo)
 END_MESSAGE_MAP()
 
 
@@ -1083,6 +1084,56 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
 	imshow("Face Detection", srcImage);
 }
 
+void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
+{
+	cv::VideoCapture cap(".\\assets\\perfectworld.mp4");
+	if (!cap.isOpened()) {
+		std::cout << "Failed to open the source file." << std::endl;
+		return;
+	}
+
+	// 加载人脸检测分类器
+	cv::CascadeClassifier faceClassifier;
+	if (!faceClassifier.load(".\\assets\\haarcascade_frontalface_alt.xml")) {
+		std::cout << "Failed to load classifier." << std::endl;
+		return;
+	}
+
+	const char szVideoWndName[] = "Video with Faces Detected";
+	Mat frame;
+	while (true) {
+		// 读取视频帧
+		cap >> frame;
+		if (frame.empty())
+			break;
+
+		// 将图像转换为灰度图
+		Mat grayFrame;
+		cvtColor(frame, grayFrame, COLOR_BGR2GRAY);
+
+		// 检测人脸
+		std::vector<Rect> faces;
+		faceClassifier.detectMultiScale(grayFrame, faces, 1.1, 3, 0, Size(30, 30));
+
+		// 用矩形框标注人脸
+		for (const Rect& face : faces) {
+			rectangle(frame, face, Scalar(0, 255, 0), 2);
+		}
+
+		// 显示视频帧
+		imshow(szVideoWndName, frame);
+
+		// 按下 ESC 键退出循环
+		if (waitKey(1) == 27) {
+			cv::destroyWindow(szVideoWndName);
+			break;
+		}			
+	}
+
+	// 释放资源
+	cap.release();
+}
+
 /*
 * SIFT（Scale-Invariant Feature Transform，尺度不变特征变换）算法
 * 即使物体在图像中的大小、方向、光照条件不同，SIFT 算法也能提取出稳定的特征，从而实现准确识别。
@@ -1109,6 +1160,7 @@ void COpenCVMiscDlg::_FindImageMatches()
 	Mat descriptors1, descriptors2;
 	sift->detectAndCompute(img1, noArray(), keypoints1, descriptors1);
 	sift->detectAndCompute(img2, noArray(), keypoints2, descriptors2);
+	std::cout << "[Key Points] image1: " << keypoints1.size() << ", image2: " << keypoints2.size() << std::endl;
 
 	// 创建特征匹配器
 	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
@@ -1121,7 +1173,11 @@ void COpenCVMiscDlg::_FindImageMatches()
 	std::cout << "The total number of matches: " << knnMatches.size() << std::endl;
 
 	// 筛选好的匹配点
-	// 距离越小，说明两个特征点越相似，匹配度越高。
+	// 原理：
+	// 当使用某种距离度量（如欧氏距离）来衡量特征描述子之间的相似性时，距离越小表示两个特征点越相似。
+	// - 最近邻（first match）：是与查询点距离最近的训练图像中的特征点。如果这确实是正确的匹配点，那么它与查询点的距离应该是最小的。
+	// - 次近邻（second match）：是与查询点距离次小的训练图像中的特征点。如果最近邻是正确的匹配，那么次近邻应该与查询点的相似度相对较低，距离相对较大。
+	// 因此，first_match / second_match 的比率越小，越证明first match是一个好的匹配点！
 	const float ratioThreshold = 0.50f;
 	std::vector<DMatch> goodMatches;
 	for (size_t i = 0; i < knnMatches.size(); i++) {
@@ -1146,7 +1202,7 @@ void COpenCVMiscDlg::_FindImageMatches()
 		cv::rectangle(img2, rect2, Scalar(0, 255, 0), 2);
 		//imshow("Matches - Image1", img1);
 		//imshow("Matches - Image2", img2);
-		std::cout << "Found matches successfully." << std::endl;
+		std::cout << "It's a pretty good match." << std::endl;
 	}
 	else {
 		std::cout << "It is NOT a good match!" << std::endl;
