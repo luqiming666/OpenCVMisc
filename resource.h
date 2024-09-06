@@ -32,6 +32,8 @@
 #define IDC_BUTTON_FIND_OBJECT_SIFT     1019
 #define IDC_BUTTON_DETECT_IN_VIDEO      1020
 #define IDC_BUTTON_DETECT_AND_TRACK     1021
+#define IDC_BUTTON_ROTATE2              1022
+#define IDC_BUTTON_WARP                 1022
 
 // Next default values for new objects
 // 

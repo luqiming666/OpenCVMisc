@@ -225,6 +225,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_FIND_OBJECT_SIFT, &COpenCVMiscDlg::OnBnClickedButtonFindObjectSift)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_IN_VIDEO, &COpenCVMiscDlg::OnBnClickedButtonDetectInVideo)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_AND_TRACK, &COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack)
+	ON_BN_CLICKED(IDC_BUTTON_WARP, &COpenCVMiscDlg::OnBnClickedButtonWarp)
 END_MESSAGE_MAP()
 
 
@@ -693,6 +694,8 @@ void COpenCVMiscDlg::OnBnClickedButtonbilateralfilter()
 
 void COpenCVMiscDlg::OnBnClickedButtonResize()
 {
+	if (gSrcImg.empty()) return;
+
 	//float aspectRatio = gSrcImg.cols * 1.0 / gSrcImg.rows;
 	float ratio = 0.5f;
 	int newWidth = gSrcImg.cols * ratio;
@@ -701,6 +704,12 @@ void COpenCVMiscDlg::OnBnClickedButtonResize()
 	Mat newImage;
 	cv::resize(gSrcImg, newImage, Size(newWidth, newHeight), INTER_AREA);
 	imshow("Resize", newImage);
+
+	if (gSrcImg.cols > 250 && gSrcImg.rows > 250) {
+		Rect roi(0, 0, 250, 250);
+		Mat cropped = gSrcImg(roi);
+		imshow("Crop", cropped);
+	}	
 }
 
 void COpenCVMiscDlg::OnBnClickedButtonFlip()
@@ -729,6 +738,22 @@ void COpenCVMiscDlg::OnBnClickedButtonRotate()
 	Mat	rotated;
 	cv::warpAffine(gSrcImg, rotated, mtrx, Size(width, height));
 	imshow("Rotation", rotated);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonWarp()
+{
+	Mat srcImage, imgWarp;
+	srcImage = imread(".\\assets\\queen.png");
+	if (srcImage.empty()) return;
+
+	float w = 340, h = 400;
+	Point2f src[4] = { {25, 62}, {348, 10}, {58, 426}, {424, 356} };
+	Point2f dst[4] = { {0.0f, 0.0f}, {w, 0.0f}, {0.0f, h}, {w, h} };
+	Mat matrix = cv::getPerspectiveTransform(src, dst);
+	cv::warpPerspective(srcImage, imgWarp, matrix, Point(w, h));
+
+	imshow("Image - original", srcImage);
+	imshow("Image - warped", imgWarp);
 }
 
 void COpenCVMiscDlg::OnBnClickedButtonMorphology()
@@ -1309,3 +1334,5 @@ void COpenCVMiscDlg::OnBnClickedButtonFindObjectSift()
 	CAutoTicker ticker("FindObject - SIFT");
 	_FindImageMatches();
 }
+
+

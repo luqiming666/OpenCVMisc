@@ -67,4 +67,5 @@ public:
 	afx_msg void OnBnClickedButtonFindObjectSift();
 	afx_msg void OnBnClickedButtonDetectInVideo();
 	afx_msg void OnBnClickedButtonDetectAndTrack();
+	afx_msg void OnBnClickedButtonWarp();
 };
