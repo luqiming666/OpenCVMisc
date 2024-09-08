@@ -68,4 +68,5 @@ public:
 	afx_msg void OnBnClickedButtonDetectInVideo();
 	afx_msg void OnBnClickedButtonDetectAndTrack();
 	afx_msg void OnBnClickedButtonWarp();
+	afx_msg void OnBnClickedButtonSplitMerge();
 };

@@ -226,6 +226,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_IN_VIDEO, &COpenCVMiscDlg::OnBnClickedButtonDetectInVideo)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_AND_TRACK, &COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack)
 	ON_BN_CLICKED(IDC_BUTTON_WARP, &COpenCVMiscDlg::OnBnClickedButtonWarp)
+	ON_BN_CLICKED(IDC_BUTTON_SPLIT_MERGE, &COpenCVMiscDlg::OnBnClickedButtonSplitMerge)
 END_MESSAGE_MAP()
 
 
@@ -509,6 +510,38 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	std::cout << "Times passed in seconds (LUT): " << t << std::endl;
 	imshow("TestImage - Color reduction - LUT", result);
 	
+
+	// Test anything...
+
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonSplitMerge()
+{
+	if (gSrcImg.empty()) return;
+
+	Mat channels[3];
+	cv::split(gSrcImg, channels);
+	imshow("Split into 3 grayscale images", channels[0]);
+
+	Mat zeroChannel = Mat::zeros(channels[0].size(), channels[0].type());
+	Mat mergedImg, channelsToMerge[3];
+	channelsToMerge[0] = channels[0];
+	channelsToMerge[1] = zeroChannel;
+	channelsToMerge[2] = zeroChannel;
+	cv::merge(channelsToMerge, 3, mergedImg);
+	imshow("Split & Merge - B", mergedImg);
+
+	channelsToMerge[0] = zeroChannel;
+	channelsToMerge[1] = channels[1];
+	channelsToMerge[2] = zeroChannel;
+	cv::merge(channelsToMerge, 3, mergedImg);
+	imshow("Split & Merge - G", mergedImg);
+
+	channelsToMerge[0] = zeroChannel;
+	channelsToMerge[1] = zeroChannel;
+	channelsToMerge[2] = channels[2];
+	cv::merge(channelsToMerge, 3, mergedImg);
+	imshow("Split & Merge - R", mergedImg);
 }
 
 void COpenCVMiscDlg::ShowOriginalImage()
@@ -1334,5 +1367,3 @@ void COpenCVMiscDlg::OnBnClickedButtonFindObjectSift()
 	CAutoTicker ticker("FindObject - SIFT");
 	_FindImageMatches();
 }
-
-
