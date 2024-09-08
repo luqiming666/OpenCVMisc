@@ -1158,6 +1158,15 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 		return;
 	}
 
+	// video properties
+	int frameWidth = cap.get(CAP_PROP_FRAME_WIDTH);
+	int frameHeight = cap.get(CAP_PROP_FRAME_HEIGHT);
+	int fps = cap.get(CAP_PROP_FPS);
+	int frameCount = cap.get(CAP_PROP_FRAME_COUNT);
+	//int fourcc = cap.get(CAP_PROP_FOURCC);
+	std::cout << "Video capture frame width: " << frameWidth << " height: " << frameHeight 
+		<< " fps: " << fps << " frame_count: " << frameCount << std::endl;
+
 	// 加载人脸检测分类器
 	cv::CascadeClassifier faceClassifier;
 	if (!faceClassifier.load(".\\assets\\haarcascade_frontalface_alt.xml")) {
@@ -1166,12 +1175,20 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 	}
 
 	const char szVideoWndName[] = "Video with Faces Detected";
+#ifdef _OPEN_CAMERA
+	cv::VideoWriter vidWriter("cap.avi", VideoWriter::fourcc('X', 'V', 'I', 'D'), fps, cv::Size(frameWidth, frameHeight));
+#endif
+
 	Mat frame;
 	while (true) {
 		// 读取视频帧
 		cap >> frame;
 		if (frame.empty())
 			break;
+
+#ifdef _OPEN_CAMERA
+		vidWriter << frame;
+#endif 
 
 		// 将图像转换为灰度图
 		Mat grayFrame;
@@ -1195,6 +1212,10 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 			break;
 		}			
 	}
+
+#ifdef _OPEN_CAMERA
+	vidWriter.release();
+#endif 
 
 	// 释放资源
 	cap.release();
