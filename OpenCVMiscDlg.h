@@ -69,4 +69,6 @@ public:
 	afx_msg void OnBnClickedButtonDetectAndTrack();
 	afx_msg void OnBnClickedButtonWarp();
 	afx_msg void OnBnClickedButtonSplitMerge();
+	afx_msg void OnBnClickedButtonBorder();
+	afx_msg void OnBnClickedButtonDraw();
 };

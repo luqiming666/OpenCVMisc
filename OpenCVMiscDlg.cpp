@@ -227,6 +227,8 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_AND_TRACK, &COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack)
 	ON_BN_CLICKED(IDC_BUTTON_WARP, &COpenCVMiscDlg::OnBnClickedButtonWarp)
 	ON_BN_CLICKED(IDC_BUTTON_SPLIT_MERGE, &COpenCVMiscDlg::OnBnClickedButtonSplitMerge)
+	ON_BN_CLICKED(IDC_BUTTON_BORDER, &COpenCVMiscDlg::OnBnClickedButtonBorder)
+	ON_BN_CLICKED(IDC_BUTTON_DRAW, &COpenCVMiscDlg::OnBnClickedButtonDraw)
 END_MESSAGE_MAP()
 
 
@@ -512,7 +514,67 @@ void COpenCVMiscDlg::OnBnClickedButtonBasic()
 	
 
 	// Test anything...
+	
+}
 
+
+void MyEllipse(Mat img, int width, double angle)
+{
+	int thickness = 2;
+	int lineType = 8;
+
+	cv::ellipse(img,
+		Point(width / 2, width / 2),
+		Size(width / 4, width / 16),
+		angle,
+		0,
+		360,
+		Scalar(255, 0, 0),
+		thickness,
+		lineType);
+}
+
+void MyFilledCircle(Mat img, int width, Point center)
+{
+	cv::circle(img,
+		center,
+		width / 32,
+		Scalar(0, 0, 255),
+		FILLED,
+		LINE_8);
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonDraw()
+{
+	const int width = 500;
+
+	Mat atom_image = Mat::zeros(width, width, CV_8UC3);
+
+	MyEllipse(atom_image, width, 90);
+	MyEllipse(atom_image, width, 0);
+	MyEllipse(atom_image, width, 45);
+	MyEllipse(atom_image, width , -45);
+
+	MyFilledCircle(atom_image, width, Point(width / 2, width / 2));
+
+	imshow("Drawing on an image", atom_image);
+}
+
+RNG rng(12345); // 随机数生成器
+void COpenCVMiscDlg::OnBnClickedButtonBorder()
+{
+	if (gSrcImg.empty()) return;
+
+	Scalar color(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+
+	// 在图像四周添加宽度为 10 像素的边框，边框类型为 BORDER_CONSTANT，颜色为白色
+	Mat borderedImage;
+	int top = 10, bottom = 10, left = 10, right = 10;
+	cv::copyMakeBorder(gSrcImg, borderedImage, top, bottom, left, right, BORDER_CONSTANT, color);
+	imshow("Make Border - constant", borderedImage);
+
+	cv::copyMakeBorder(gSrcImg, borderedImage, top, bottom, left, right, BORDER_REPLICATE);
+	imshow("Make Border - reflect", borderedImage);
 }
 
 void COpenCVMiscDlg::OnBnClickedButtonSplitMerge()
@@ -649,6 +711,8 @@ void COpenCVMiscDlg::OnBnClickedButtonGrayscale()
 // https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html
 void COpenCVMiscDlg::OnBnClickedButtonBlur()
 {
+	if (gSrcImg.empty()) return;
+
 	// 高斯模糊
 	//	参数Size：内核的宽度和高度，须为奇数，或为0（则由sigma参数计算而得）
 	//	参数sigmaX：X方向的sigma，sigma越大越模糊（对更多的领域像素产生影响）
@@ -783,7 +847,7 @@ void COpenCVMiscDlg::OnBnClickedButtonWarp()
 	Point2f src[4] = { {25, 62}, {348, 10}, {58, 426}, {424, 356} };
 	Point2f dst[4] = { {0.0f, 0.0f}, {w, 0.0f}, {0.0f, h}, {w, h} };
 	Mat matrix = cv::getPerspectiveTransform(src, dst);
-	cv::warpPerspective(srcImage, imgWarp, matrix, Point(w, h));
+	cv::warpPerspective(srcImage, imgWarp, matrix, Size(w, h));
 
 	imshow("Image - original", srcImage);
 	imshow("Image - warped", imgWarp);
@@ -1388,3 +1452,5 @@ void COpenCVMiscDlg::OnBnClickedButtonFindObjectSift()
 	CAutoTicker ticker("FindObject - SIFT");
 	_FindImageMatches();
 }
+
+
