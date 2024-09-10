@@ -71,4 +71,5 @@ public:
 	afx_msg void OnBnClickedButtonSplitMerge();
 	afx_msg void OnBnClickedButtonBorder();
 	afx_msg void OnBnClickedButtonDraw();
+	afx_msg void OnBnClickedButtonGooglenet();
 };

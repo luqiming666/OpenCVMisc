@@ -36,8 +36,8 @@
 #define IDC_BUTTON_WARP                 1022
 #define IDC_BUTTON_SPLIT_MERGE          1023
 #define IDC_BUTTON_BORDER               1024
-#define IDC_BUTTON_BORDER2              1025
 #define IDC_BUTTON_DRAW                 1025
+#define IDC_BUTTON_GoogLeNet            1026
 
 // Next default values for new objects
 // 

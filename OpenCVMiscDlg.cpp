@@ -14,6 +14,10 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/features2d.hpp>
+#include <opencv2/dnn.hpp>
+
+#include <fstream>
+#include <filesystem>
 
 using namespace cv;
 
@@ -229,6 +233,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SPLIT_MERGE, &COpenCVMiscDlg::OnBnClickedButtonSplitMerge)
 	ON_BN_CLICKED(IDC_BUTTON_BORDER, &COpenCVMiscDlg::OnBnClickedButtonBorder)
 	ON_BN_CLICKED(IDC_BUTTON_DRAW, &COpenCVMiscDlg::OnBnClickedButtonDraw)
+	ON_BN_CLICKED(IDC_BUTTON_GoogLeNet, &COpenCVMiscDlg::OnBnClickedButtonGooglenet)
 END_MESSAGE_MAP()
 
 
@@ -1453,4 +1458,90 @@ void COpenCVMiscDlg::OnBnClickedButtonFindObjectSift()
 	_FindImageMatches();
 }
 
+// GoogLeNet 是由 Google 团队发明的。
+// GoogLeNet 在 2014 年的 ImageNet 竞赛中夺得了冠军。它创新性地采用了 Inception 模块，这种模块结构能在增加网络深度和宽度的同时，有效地减少参数数量，提高计算效率。
+// 参考文章：https://docs.opencv.org/4.10.0/d5/de7/tutorial_dnn_googlenet.html
+// 对图像进行均值减法（mean subtraction）预处理的作用：将数据的分布中心化到以零为中心的附近区域，使得数据在后续的网络处理中
+//	更符合网络的学习和优化特性，加快网络的收敛速度，也可以在一定程度上消除这种整体光照变化的影响。
+void COpenCVMiscDlg::OnBnClickedButtonGooglenet()
+{
+	std::vector<std::string> classes;
+	std::ifstream ifs(".\\assets\\classification_classes_ILSVRC2012.txt"); // 分类
+	if (!ifs.is_open()) {
+		std::cout << "Classification file not found!" << std::endl;
+		return;
+	}
+	std::string line;
+	while (std::getline(ifs, line))	{
+		classes.push_back(line);
+	}
 
+	// Read and initialize network
+	static const char szModelFile[] = ".\\assets\\bvlc_googlenet.caffemodel"; // 主要用于存储训练好的神经网络模型的权重和偏置等参数
+	static const char szProtoFile[] = ".\\assets\\bvlc_googlenet.prototxt"; // 用于以文本格式定义神经网络的结构
+	if (!std::filesystem::exists(szModelFile)) {
+		std::cout << "Model file not found! Please download it from http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel" << std::endl;
+		return;
+	}
+	cv::dnn::Net net = cv::dnn::readNet(szModelFile, szProtoFile);
+	//net.setPreferableBackend(0);
+	//net.setPreferableTarget(0);
+
+	const int rszWidth = 224;
+	const int rszHeight = 224;
+	const Size imgSize(rszWidth, rszHeight);
+
+	Mat frame, blob;
+	frame = imread(".\\assets\\basketball.png"); // an image file for testing
+	// Apply necessary pre-processing like resizing and mean subtraction
+	cv::resize(frame, frame, imgSize);
+	Scalar meanFrame = cv::mean(frame);
+	cv::dnn::blobFromImage(frame, blob, 1.0, imgSize, meanFrame, false, false);
+
+	// Pass the blob to the network
+	net.setInput(blob);
+
+	// Make forward pass
+	// double t_sum = 0.0;
+	// double t;
+	int classId;
+	double confidence;
+
+	cv::TickMeter timeRecorder;
+	timeRecorder.reset();
+	Mat prob = net.forward();
+	timeRecorder.start();
+	prob = net.forward();
+	timeRecorder.stop();
+	double t1 = timeRecorder.getTimeMilli();
+
+	timeRecorder.reset();
+	for (int i = 0; i < 100; i++) {
+		timeRecorder.start();
+		prob = net.forward();
+		timeRecorder.stop();
+
+		// Get a class with a highest score
+		Point classIdPoint;
+		cv::minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
+		classId = classIdPoint.x;
+
+		// Put efficiency information.
+		// std::vector<double> layersTimes;
+		// double freq = getTickFrequency() / 1000;
+		// t = net.getPerfProfile(layersTimes) / freq;
+		// t_sum += t;
+	}
+
+	std::string label = cv::format("Inference time of 1 round: %.2f ms", t1);
+	std::string label2 = cv::format("Average time of 100 rounds: %.2f ms", timeRecorder.getTimeMilli() / 100);
+	std::cout << label << std::endl << label2 << std::endl;
+
+	// Print predicted class
+	label = cv::format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
+		classes[classId].c_str()),
+		confidence);
+	cv::putText(frame, label, Point(0, 25), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0));
+
+	imshow("Deep learning image classification in OpenCV", frame);
+}
