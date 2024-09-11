@@ -38,6 +38,8 @@
 #define IDC_BUTTON_BORDER               1024
 #define IDC_BUTTON_DRAW                 1025
 #define IDC_BUTTON_GoogLeNet            1026
+#define IDC_BUTTON_GoogLeNet2           1027
+#define IDC_BUTTON_DETECT_BARCODE       1027
 
 // Next default values for new objects
 // 

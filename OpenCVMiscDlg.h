@@ -72,4 +72,5 @@ public:
 	afx_msg void OnBnClickedButtonBorder();
 	afx_msg void OnBnClickedButtonDraw();
 	afx_msg void OnBnClickedButtonGooglenet();
+	afx_msg void OnBnClickedButtonDetectBarcode();
 };

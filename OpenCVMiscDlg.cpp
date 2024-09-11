@@ -16,7 +16,9 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/dnn.hpp>
 
+#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <filesystem>
 
 using namespace cv;
@@ -42,6 +44,14 @@ using namespace cv;
 //
 Mat gSrcImg; // The original source image
 
+static const Scalar greenColor(0, 255, 0);
+static const Scalar redColor(0, 0, 255);
+static const Scalar yellowColor(0, 255, 255);
+static Scalar randColor()
+{
+	RNG& rng = theRNG();
+	return Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+}
 
 int GetBytesPerPixel(Mat& image)
 {
@@ -234,6 +244,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_BORDER, &COpenCVMiscDlg::OnBnClickedButtonBorder)
 	ON_BN_CLICKED(IDC_BUTTON_DRAW, &COpenCVMiscDlg::OnBnClickedButtonDraw)
 	ON_BN_CLICKED(IDC_BUTTON_GoogLeNet, &COpenCVMiscDlg::OnBnClickedButtonGooglenet)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_BARCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectBarcode)
 END_MESSAGE_MAP()
 
 
@@ -1544,4 +1555,45 @@ void COpenCVMiscDlg::OnBnClickedButtonGooglenet()
 	cv::putText(frame, label, Point(0, 25), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0));
 
 	imshow("Deep learning image classification in OpenCV", frame);
+}
+
+// 参考文章：https://docs.opencv.org/4.10.0/d6/d25/tutorial_barcode_detect_and_decode.html
+// opencv\samples\cpp\barcode.cpp
+// 支持的条形码标准： EAN-8, EAN-13, UPC-A, UPC-E
+void COpenCVMiscDlg::OnBnClickedButtonDetectBarcode()
+{
+	std::vector<Point> corners;
+	std::vector<std::string> decode_info;
+	std::vector<std::string> decode_type;
+
+	Ptr<barcode::BarcodeDetector> bardet;
+	bardet = makePtr<barcode::BarcodeDetector>(".\\assets\\sr.prototxt", ".\\assets\\sr.caffemodel");
+
+	Mat frame = imread(".\\assets\\barcode_book.png");
+	bardet->detectAndDecodeWithType(frame, decode_info, decode_type, corners);
+
+	for (size_t i = 0; i < corners.size(); i += 4)
+	{
+		const size_t idx = i / 4;
+		const bool isDecodable = idx < decode_info.size()
+			&& idx < decode_type.size()
+			&& !decode_type[idx].empty();
+		const Scalar lineColor = isDecodable ? greenColor : redColor;
+		// draw barcode rectangle
+		std::vector<Point> contour(corners.begin() + i, corners.begin() + i + 4);
+		const std::vector< std::vector<Point> > contours{ contour };
+		cv::drawContours(frame, contours, 0, lineColor, 1);
+		// draw vertices
+		for (size_t j = 0; j < 4; j++)
+			cv::circle(frame, contour[j], 2, randColor(), -1);
+		// write decoded text
+		if (isDecodable)
+		{
+			std::ostringstream buf;
+			buf << "[" << decode_type[idx] << "] " << decode_info[idx];
+			cv::putText(frame, buf.str(), Point(0, 25), FONT_HERSHEY_COMPLEX, 0.6, redColor, 1);
+		}
+	}
+
+	imshow("Barcode", frame);
 }
