@@ -245,6 +245,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DRAW, &COpenCVMiscDlg::OnBnClickedButtonDraw)
 	ON_BN_CLICKED(IDC_BUTTON_GoogLeNet, &COpenCVMiscDlg::OnBnClickedButtonGooglenet)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_BARCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectBarcode)
+	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_FACE, &COpenCVMiscDlg::OnBnClickedButtonRecognizeFace)
 END_MESSAGE_MAP()
 
 
@@ -282,6 +283,9 @@ BOOL COpenCVMiscDlg::OnInitDialog()
 	mBtnBasic.SubclassDlgItem(IDC_BUTTON_BASIC, this); // 定制按钮
 	mBtnBasic.SetIcon(IDI_ICON_LAB);
 	mBtnBasic.SizeToContent();
+
+	std::cout << "Welcome to OpenCV " << CV_VERSION << std::endl;
+	//std::cout << cv::getBuildInformation() << std::endl;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -1572,8 +1576,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectBarcode()
 	Mat frame = imread(".\\assets\\barcode_book.png");
 	bardet->detectAndDecodeWithType(frame, decode_info, decode_type, corners);
 
-	for (size_t i = 0; i < corners.size(); i += 4)
-	{
+	for (size_t i = 0; i < corners.size(); i += 4) {
 		const size_t idx = i / 4;
 		const bool isDecodable = idx < decode_info.size()
 			&& idx < decode_type.size()
@@ -1587,13 +1590,129 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectBarcode()
 		for (size_t j = 0; j < 4; j++)
 			cv::circle(frame, contour[j], 2, randColor(), -1);
 		// write decoded text
-		if (isDecodable)
-		{
+		if (isDecodable) {
 			std::ostringstream buf;
 			buf << "[" << decode_type[idx] << "] " << decode_info[idx];
-			cv::putText(frame, buf.str(), Point(0, 25), FONT_HERSHEY_COMPLEX, 0.6, redColor, 1);
+			cv::putText(frame, buf.str(), contour[1], FONT_HERSHEY_COMPLEX, 0.6, redColor, 1);
 		}
 	}
 
 	imshow("Barcode", frame);
+}
+
+static void visualizeFaces(Mat& input, int frame, Mat& faces, double fps, int thickness = 2)
+{
+	std::string fpsString = cv::format("FPS : %.2f", (float)fps);
+	if (frame >= 0)
+		std::cout << "Frame " << frame << ", ";
+	std::cout << "FPS: " << fpsString << std::endl;
+	cv::putText(input, fpsString, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 1);
+
+	for (int i = 0; i < faces.rows; i++) {
+		// Print results
+		std::cout << "Face " << i
+			<< ", top-left coordinates: (" << faces.at<float>(i, 0) << ", " << faces.at<float>(i, 1) << "), "
+			<< "box width: " << faces.at<float>(i, 2) << ", box height: " << faces.at<float>(i, 3) << ", "
+			<< "score: " << cv::format("%.2f", faces.at<float>(i, 14))
+			<< std::endl;
+
+		// Draw bounding box
+		int faceX = int(faces.at<float>(i, 0));
+		int faceY = int(faces.at<float>(i, 1));
+		cv::rectangle(input, Rect2i(faceX, faceY, int(faces.at<float>(i, 2)), int(faces.at<float>(i, 3))), Scalar(0, 255, 0), thickness);
+		if (faces.rows > 1) {
+			std::string label = cv::format("(%d)", i);
+			cv::putText(input, label, Point(faceX + 2, faceY + 20), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+		}		
+		// Draw landmarks
+		cv::circle(input, Point2i(int(faces.at<float>(i, 4)), int(faces.at<float>(i, 5))), 2, Scalar(255, 0, 0), thickness);
+		cv::circle(input, Point2i(int(faces.at<float>(i, 6)), int(faces.at<float>(i, 7))), 2, Scalar(0, 0, 255), thickness);
+		cv::circle(input, Point2i(int(faces.at<float>(i, 8)), int(faces.at<float>(i, 9))), 2, Scalar(0, 255, 0), thickness);
+		cv::circle(input, Point2i(int(faces.at<float>(i, 10)), int(faces.at<float>(i, 11))), 2, Scalar(255, 0, 255), thickness);
+		cv::circle(input, Point2i(int(faces.at<float>(i, 12)), int(faces.at<float>(i, 13))), 2, Scalar(0, 255, 255), thickness);
+	}	
+}
+
+// 参考文章：https://docs.opencv.org/4.10.0/d0/dd4/tutorial_dnn_face.html
+// 使用到的人脸检测模型和人脸识别模型均为 ONNX 格式
+// 测试结果：face_detection_yunet_2023mar.onnx 比 face_detection_yunet_2023mar_int8.onnx 检测出更多的人脸
+void COpenCVMiscDlg::OnBnClickedButtonRecognizeFace()
+{
+	double cosine_similar_thresh = 0.363;
+	double l2norm_similar_thresh = 1.128;
+
+	// Initialize FaceDetectorYN
+	Ptr<FaceDetectorYN> detector = FaceDetectorYN::create(".\\assets\\face_detection_yunet_2023mar.onnx", "", Size(320, 320));
+
+	Mat image1 = imread(".\\assets\\ruok.png"); // 多脸
+	Mat image2 = imread(".\\assets\\okok.png"); // 单脸
+
+	TickMeter tm;
+	float scale = 1.0; // 图像缩放比例
+	int imageWidth = int(image1.cols * scale);
+	int imageHeight = int(image1.rows * scale);
+	cv::resize(image1, image1, Size(imageWidth, imageHeight));
+
+	tm.start();
+	// Set input size before inference
+	detector->setInputSize(image1.size());
+	Mat faces1;
+	detector->detect(image1, faces1);
+	if (faces1.rows < 1) {
+		std::cout << "Cannot find a face in image1" << std::endl;
+		return;
+	}
+	tm.stop();
+	// Draw results on the input image
+	visualizeFaces(image1, -1, faces1, tm.getFPS());
+
+	// Visualize results
+	imshow("DNN - Face Recognition - image1", image1);
+	pollKey();  // handle UI events to show content
+
+
+	tm.reset();
+	tm.start();
+	detector->setInputSize(image2.size());
+
+	Mat faces2;
+	detector->detect(image2, faces2);
+	if (faces2.rows < 1) {
+		std::cout << "Cannot find a face in image2." << std::endl;
+		return;
+	}
+	tm.stop();
+	visualizeFaces(image2, -1, faces2, tm.getFPS());
+	imshow("DNN - Face Recognition - image2", image2);
+	pollKey(); // handle UI events to show content
+
+
+	// Initialize FaceRecognizerSF
+	Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(".\\assets\\face_recognition_sface_2021dec_int8.onnx", "");
+
+	// Aligning and cropping facial image through the first face of faces detected.
+	Mat aligned_face1, aligned_face2;
+	faceRecognizer->alignCrop(image2, faces2.row(0), aligned_face2);
+	// Run feature extraction with given aligned_face
+	Mat feature1, feature2;
+	faceRecognizer->feature(aligned_face2, feature2);
+	feature2 = feature2.clone(); // deep copy
+
+	for (int i = 0; i < faces1.rows; i++) {
+		faceRecognizer->alignCrop(image1, faces1.row(i), aligned_face1);
+		faceRecognizer->feature(aligned_face1, feature1);
+		feature1 = feature1.clone();
+
+		double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_COSINE);
+		if (cos_score >= cosine_similar_thresh) {
+			std::cout << "!!! Image2 matches the face index " << i << " of Image1." << std::endl;
+		}
+		std::cout << " Cosine Similarity: " << cos_score << ", threshold: " << cosine_similar_thresh << ". (higher value means higher similarity, max 1.0)" << std::endl;
+
+		double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_NORM_L2);
+		if (L2_score <= l2norm_similar_thresh) {
+			std::cout << "!!! Image2 matches the face index " << i << " of Image1." << std::endl;
+		}
+		std::cout << " NormL2 Distance: " << L2_score << ", threshold: " << l2norm_similar_thresh << ". (lower value means higher similarity, min 0.0)" << std::endl;
+	}
 }
