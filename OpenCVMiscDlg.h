@@ -75,4 +75,5 @@ public:
 	afx_msg void OnBnClickedButtonDetectBarcode();
 	afx_msg void OnBnClickedButtonRecognizeFace();
 	afx_msg void OnBnClickedButtonRecognizeText();
+	afx_msg void OnBnClickedButtonDetectQrcode();
 };

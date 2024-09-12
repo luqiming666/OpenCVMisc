@@ -247,6 +247,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_BARCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectBarcode)
 	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_FACE, &COpenCVMiscDlg::OnBnClickedButtonRecognizeFace)
 	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_TEXT, &COpenCVMiscDlg::OnBnClickedButtonRecognizeText)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_QRCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectQrcode)
 END_MESSAGE_MAP()
 
 
@@ -1769,7 +1770,7 @@ void COpenCVMiscDlg::OnBnClickedButtonRecognizeText()
 	tm.stop();
 	double t1 = tm.getTimeMilli();
 	std::cout << "Predition: " << recognitionResult << std::endl 
-		<< "Time: " << t1 << "ms" << std::endl;
+		<< "Time (ms): " << t1 << std::endl;
 
 #if 0
 	int size = MultiByteToWideChar(CP_UTF8, 0, recognitionResult.c_str(), -1, NULL, 0);
@@ -1777,4 +1778,49 @@ void COpenCVMiscDlg::OnBnClickedButtonRecognizeText()
 	MultiByteToWideChar(CP_UTF8, 0, recognitionResult.c_str(), -1, wcStr, size);
 	delete[] wcStr;
 #endif
+}
+
+static
+void drawQRCodeContour(Mat& color_image, const std::vector<Point>& corners)
+{
+	if (!corners.empty())
+	{
+		double show_radius = (color_image.rows > color_image.cols)
+			? (2.813 * color_image.rows) / color_image.cols
+			: (2.813 * color_image.cols) / color_image.rows;
+		double contour_radius = show_radius * 0.4;
+
+		std::vector< std::vector<Point> > contours;
+		contours.push_back(corners);
+		drawContours(color_image, contours, 0, Scalar(211, 0, 148), cvRound(contour_radius));
+
+		RNG rng(1000);
+		for (size_t i = 0; i < 4; i++)
+		{
+			Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+			circle(color_image, corners[i], cvRound(show_radius), color, -1);
+		}
+	}
+}
+
+// 参考代码：opencv\samples\cpp\qrcode.cpp
+void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
+{
+	Mat image = imread(".\\assets\\qrcode.png");
+
+	Ptr<GraphicalCodeDetector> qrcode = makePtr<QRCodeDetector>();
+
+	std::vector<Point> corners;
+	std::vector<String> decode_info;
+	TickMeter tm;
+	tm.start();
+	String decode_info1 = qrcode->detectAndDecode(image, corners);
+	//bool result_detection = qrcode->detectAndDecodeMulti(image, decode_info, corners);
+	tm.stop();
+
+	std::cout << "QR decoded: " << decode_info1 << std::endl;
+	std::cout << "Time (ms): " << tm.getTimeMilli() << std::endl;
+
+	drawQRCodeContour(image, corners);
+	imshow("QR Code", image);
 }
