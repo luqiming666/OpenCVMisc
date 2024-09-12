@@ -1804,6 +1804,7 @@ void drawQRCodeContour(Mat& color_image, const std::vector<Point>& corners)
 }
 
 // 参考代码：opencv\samples\cpp\qrcode.cpp
+//#define _TEST_QR_ENCODE
 void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
 {
 	Mat image = imread(".\\assets\\qrcode.png");
@@ -1822,5 +1823,22 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
 	std::cout << "Time (ms): " << tm.getTimeMilli() << std::endl;
 
 	drawQRCodeContour(image, corners);
-	imshow("QR Code", image);
+	imshow("QR Code - decoded", image);
+
+
+#ifdef _TEST_QR_ENCODE
+	QRCodeEncoder::Params params;
+	params.version = 7; // [1, 40]
+	params.correction_level = QRCodeEncoder::CORRECT_LEVEL_M; // 级别越高越抗干扰
+	params.mode = QRCodeEncoder::MODE_BYTE;
+	Ptr<QRCodeEncoder> qrencoder = QRCodeEncoder::create(params);
+		
+	Mat codedImg, codedImg2;
+	qrencoder->encode("https://www.iq.com/", codedImg); // 生成的图片太小了！分辨率太低，怎么办？
+	DumpImageInfo(codedImg, "QR");
+	imwrite("GeneratedQR.png", codedImg);
+
+	cv::resize(codedImg, codedImg2, Size(200, 200), INTER_NEAREST);
+	imshow("QR Code - encoded", codedImg2);
+#endif
 }
