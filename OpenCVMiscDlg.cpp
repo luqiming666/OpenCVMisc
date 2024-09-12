@@ -246,6 +246,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_GoogLeNet, &COpenCVMiscDlg::OnBnClickedButtonGooglenet)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_BARCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectBarcode)
 	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_FACE, &COpenCVMiscDlg::OnBnClickedButtonRecognizeFace)
+	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_TEXT, &COpenCVMiscDlg::OnBnClickedButtonRecognizeText)
 END_MESSAGE_MAP()
 
 
@@ -1715,4 +1716,65 @@ void COpenCVMiscDlg::OnBnClickedButtonRecognizeFace()
 		}
 		std::cout << " NormL2 Distance: " << L2_score << ", threshold: " << l2norm_similar_thresh << ". (lower value means higher similarity, min 0.0)" << std::endl;
 	}
+}
+
+// 基于DNN的文字识别
+// 参考文章：https://docs.opencv.org/4.10.0/d4/d43/tutorial_dnn_text_spotting.html
+// 参考代码：opencv\samples\dnn\scene_text_recognition.cpp
+// 模型下载说明：根据是否需要支持大写字母，是否需要支持中文 下载不同的模型和词汇表
+/*
+* crnn_cs_CN.onnx
+* The classification number of this model is 3944 (0~9 + a~z + A~Z + Chinese characters + special characters).
+* 实测：中文识别准确率低！
+*/
+void COpenCVMiscDlg::OnBnClickedButtonRecognizeText()
+{
+	// Read and initialize network
+	static const char szModelFile[] = ".\\assets\\crnn_cs_CN.onnx"; 
+	if (!std::filesystem::exists(szModelFile)) {
+		std::cout << "Model file not found! Please download it from https://drive.google.com/uc?export=dowload&id=1is4eYEUKH7HR7Gl37Sw4WPXx6Ir8oQEG" << std::endl;
+		return;
+	}
+
+	cv::dnn::TextRecognitionModel recognizer(szModelFile);
+
+	// Load vocabulary
+	static const char szvocFile[] = ".\\assets\\alphabet_3944.txt";
+	std::ifstream vocFile(szvocFile);
+	if (!vocFile.is_open()) {
+		std::cout << "Vocabulary file not found!" << std::endl;
+		return;
+	}
+	String vocLine;
+	std::vector<String> vocabulary;
+	while (std::getline(vocFile, vocLine)) {
+		vocabulary.push_back(vocLine);
+	}
+	recognizer.setVocabulary(vocabulary);
+	recognizer.setDecodeType("CTC-greedy");
+
+	// NOTE: mycn.png 中文识别不准确！
+	Mat image = imread(".\\assets\\myabc.png", IMREAD_COLOR); // 1_1.png, 2540_8.png, 858_2.png, 30_5.png, 377_7.png, 395_3.png
+
+	// Normalization parameters
+	double scale = 1.0 / 127.5;
+	Scalar mean = Scalar(127.5, 127.5, 127.5);
+	Size inputSize = Size(100, 32);
+	recognizer.setInputParams(scale, inputSize, mean);
+
+	// Recognition
+	TickMeter tm;
+	tm.start();
+	std::string recognitionResult = recognizer.recognize(image);
+	tm.stop();
+	double t1 = tm.getTimeMilli();
+	std::cout << "Predition: " << recognitionResult << std::endl 
+		<< "Time: " << t1 << "ms" << std::endl;
+
+#if 0
+	int size = MultiByteToWideChar(CP_UTF8, 0, recognitionResult.c_str(), -1, NULL, 0);
+	wchar_t* wcStr = new wchar_t[size];
+	MultiByteToWideChar(CP_UTF8, 0, recognitionResult.c_str(), -1, wcStr, size);
+	delete[] wcStr;
+#endif
 }
