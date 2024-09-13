@@ -1804,9 +1804,9 @@ void drawQRCodeContour(Mat& color_image, const std::vector<Point>& corners)
 }
 
 static
-void scaleQRCode(Mat& input, Mat& output, int scale)
+bool scaleQRCode(Mat& input, Mat& output, int scale)
 {
-	if (input.channels() != 1 || scale < 1) return;
+	if (input.channels() != 1 || scale < 1) return false;
 
 	int newRows = input.rows * scale;
 	int newCols = input.cols * scale;
@@ -1821,6 +1821,7 @@ void scaleQRCode(Mat& input, Mat& output, int scale)
 		//std::cout << "Input row index = " << srcRowIndex << std::endl << input.row(srcRowIndex) << std::endl;
 		//std::cout << "Output row index = " << i << std::endl << output.row(i) << std::endl;
 	}
+	return true;
 }
 
 // 参考代码：opencv\samples\cpp\qrcode.cpp
@@ -1850,17 +1851,22 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
 	QRCodeEncoder::Params params;
 	//params.version = 7; // [1, 40]
 	params.correction_level = QRCodeEncoder::CORRECT_LEVEL_M; // 级别越高越抗干扰
-	params.mode = QRCodeEncoder::MODE_BYTE;
+	params.mode = QRCodeEncoder::MODE_AUTO;
 	Ptr<QRCodeEncoder> qrencoder = QRCodeEncoder::create(params);
 		
 	Mat codedImg, codedImg2;
+	tm.reset();
+	tm.start();
 	qrencoder->encode("https://www.iq.com/", codedImg);
+	tm.stop();
 	DumpImageInfo(codedImg, "QR");
 
 	// 生成的图片太小了！resize后会导致模糊
 	//cv::resize(codedImg, codedImg2, Size(300, 300), INTER_LINEAR);
-	scaleQRCode(codedImg, codedImg2, 20); // 自己实现放大
+	scaleQRCode(codedImg, codedImg2, 12); // 放大12倍
+
 	imwrite("GeneratedQR.png", codedImg2);
+	std::cout << "QR code saved to GeneratedQR.png. Encoding time (ms): " << tm.getTimeMilli() << std::endl;
 
 	imshow("QR Code - encoded", codedImg2);
 #endif
