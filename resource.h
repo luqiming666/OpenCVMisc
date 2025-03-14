@@ -42,6 +42,7 @@
 #define IDC_BUTTON_RECOGNIZE_FACE       1028
 #define IDC_BUTTON_RECOGNIZE_TEXT       1029
 #define IDC_BUTTON_DETECT_QRCODE        1030
+#define IDC_BUTTON_DETECT_HAND          1031
 
 // Next default values for new objects
 // 

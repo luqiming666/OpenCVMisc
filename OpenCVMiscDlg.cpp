@@ -248,6 +248,7 @@ BEGIN_MESSAGE_MAP(COpenCVMiscDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_FACE, &COpenCVMiscDlg::OnBnClickedButtonRecognizeFace)
 	ON_BN_CLICKED(IDC_BUTTON_RECOGNIZE_TEXT, &COpenCVMiscDlg::OnBnClickedButtonRecognizeText)
 	ON_BN_CLICKED(IDC_BUTTON_DETECT_QRCODE, &COpenCVMiscDlg::OnBnClickedButtonDetectQrcode)
+	ON_BN_CLICKED(IDC_BUTTON_DETECT_HAND, &COpenCVMiscDlg::OnBnClickedButtonDetectHand)
 END_MESSAGE_MAP()
 
 
@@ -1229,6 +1230,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectFace()
 	imshow("Face Detection", srcImage);
 }
 
+// 注意：只能运行Release版本！
 //#define _OPEN_CAMERA
 void COpenCVMiscDlg::OnBnClickedButtonDetectInVideo()
 {
@@ -1335,6 +1337,7 @@ private:
 };
 
 // 优化实现：每次检测会导致视频卡顿，采用“检测+跟踪”策略 >> CPU使用率显著下降！
+// 注意：只能运行Release版本！
 void COpenCVMiscDlg::OnBnClickedButtonDetectAndTrack()
 {
 	cv::VideoCapture cap(".\\assets\\perfectworld.mp4");
@@ -1638,6 +1641,7 @@ static void visualizeFaces(Mat& input, int frame, Mat& faces, double fps, int th
 // 参考文章：https://docs.opencv.org/4.10.0/d0/dd4/tutorial_dnn_face.html
 // 使用到的人脸检测模型和人脸识别模型均为 ONNX 格式
 // 测试结果：face_detection_yunet_2023mar.onnx 比 face_detection_yunet_2023mar_int8.onnx 检测出更多的人脸
+// 注意：只能运行Release版本！
 void COpenCVMiscDlg::OnBnClickedButtonRecognizeFace()
 {
 	double cosine_similar_thresh = 0.363;
@@ -1723,6 +1727,7 @@ void COpenCVMiscDlg::OnBnClickedButtonRecognizeFace()
 // 参考文章：https://docs.opencv.org/4.10.0/d4/d43/tutorial_dnn_text_spotting.html
 // 参考代码：opencv\samples\dnn\scene_text_recognition.cpp
 // 模型下载说明：根据是否需要支持大写字母，是否需要支持中文 下载不同的模型和词汇表
+// 注意：只能运行Release版本！
 /*
 * crnn_cs_CN.onnx
 * The classification number of this model is 3944 (0~9 + a~z + A~Z + Chinese characters + special characters).
@@ -1870,4 +1875,63 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
 
 	imshow("QR Code - encoded", codedImg2);
 #endif
+}
+
+// 参考文章：https://www.jb51.net/article/243259.htm
+bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
+{
+	// 计算模型尺寸
+	int width = src.cols;
+	int height = src.rows;
+	float ratio = width / (float)height;
+	int modelHeight = 368;
+	int modelWidth = int(ratio * modelHeight);
+
+	// Read and initialize network
+	static const char szModelFile[] = ".\\assets\\pose_iter_102000.caffemodel"; // 主要用于存储训练好的神经网络模型的权重和偏置等参数
+	static const char szProtoFile[] = ".\\assets\\pose_deploy.prototxt"; // 用于以文本格式定义神经网络的结构
+	if (!std::filesystem::exists(szModelFile)) {
+		std::cout << "Model file not found!" << std::endl;
+		return false;
+	}
+
+	cv::dnn::Net net;
+	try {
+		//cv::dnn::Net net = cv::dnn::readNetFromCaffe(szProtoFile, szModelFile);
+		net = cv::dnn::readNet(szModelFile, "");
+	}
+	catch (const std::exception& e) {
+		std::cout << "Error: " << e.what() << std::endl;
+		return false;
+	}
+	
+
+	Mat blob = cv::dnn::blobFromImage(src, 1.0/255, Size(modelWidth, modelHeight), Scalar(0, 0, 0));
+	net.setInput(blob, "image");
+
+	// 结果输出
+	Mat output = net.forward();
+	int H = output.size[2];
+	int W = output.size[3];
+	int nPoints = 21;
+	for (int i = 0; i < nPoints; i++) {
+		Mat probMap(H, W, CV_32F, output.ptr(0, i)); // 第0行的第i个元素
+		resize(probMap, probMap, Size(width, height));
+
+		Point kp; // 最大可能性手部关键点位置
+		double classProb;
+		minMaxLoc(probMap, NULL, &classProb, NULL, &kp);
+		keypoints[i] = kp;
+	}
+
+	return true;
+}
+
+void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
+{
+	Mat srcImage = imread(".\\assets\\palm.png");
+	//imshow("Source Image", srcImage);
+
+	std::vector<Point> handKPs;
+	HandKeypoints_Detect(srcImage, handKPs);
 }

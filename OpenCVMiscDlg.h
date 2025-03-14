@@ -76,4 +76,5 @@ public:
 	afx_msg void OnBnClickedButtonRecognizeFace();
 	afx_msg void OnBnClickedButtonRecognizeText();
 	afx_msg void OnBnClickedButtonDetectQrcode();
+	afx_msg void OnBnClickedButtonDetectHand();
 };
