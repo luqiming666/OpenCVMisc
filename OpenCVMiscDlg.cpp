@@ -1897,15 +1897,14 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 
 	cv::dnn::Net net;
 	try {
-		//cv::dnn::Net net = cv::dnn::readNetFromCaffe(szProtoFile, szModelFile);
-		net = cv::dnn::readNet(szModelFile, "");
+		net = cv::dnn::readNetFromCaffe(szProtoFile, szModelFile);
+		//net = cv::dnn::readNet(szModelFile, szProtoFile);
 	}
 	catch (const std::exception& e) {
 		std::cout << "Error: " << e.what() << std::endl;
 		return false;
 	}
 	
-
 	Mat blob = cv::dnn::blobFromImage(src, 1.0/255, Size(modelWidth, modelHeight), Scalar(0, 0, 0));
 	net.setInput(blob, "image");
 
@@ -1913,9 +1912,9 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 	Mat output = net.forward();
 	int H = output.size[2];
 	int W = output.size[3];
-	int nPoints = 21;
-	for (int i = 0; i < nPoints; i++) {
-		Mat probMap(H, W, CV_32F, output.ptr(0, i)); // 第0行的第i个元素
+	int ptCount = keypoints.size();
+	for (int i = 0; i < ptCount; i++) {
+		Mat probMap(H, W, CV_32F, output.ptr(0, i)); // 第0行的第i列元素
 		resize(probMap, probMap, Size(width, height));
 
 		Point kp; // 最大可能性手部关键点位置
@@ -1932,6 +1931,40 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 	Mat srcImage = imread(".\\assets\\palm.png");
 	//imshow("Source Image", srcImage);
 
-	std::vector<Point> handKPs;
+	std::vector<Point> handKPs(21);
 	HandKeypoints_Detect(srcImage, handKPs);
+	std::cout << "Hand keypoints = " << std::endl << handKPs << std::endl;
+
+	// 绘制关键点
+	for (const auto& pt : handKPs) {
+		// 使用 cv::circle 函数绘制实心圆来表示点
+		cv::circle(srcImage, pt, 6, cv::Scalar(0, 0, 255), -1);
+	}
+	imshow("Hand with detected key points", srcImage);
+
+	// 绘制关键点之间的连线
+	cv::Scalar lnColor(0, 255, 0);
+	int lnThickness = 2;
+	cv::line(srcImage, handKPs[0], handKPs[1], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[1], handKPs[2], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[2], handKPs[3], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[3], handKPs[4], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[0], handKPs[5], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[5], handKPs[6], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[6], handKPs[7], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[7], handKPs[8], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[9], handKPs[10], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[10], handKPs[11], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[11], handKPs[12], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[13], handKPs[14], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[14], handKPs[15], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[15], handKPs[16], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[0], handKPs[17], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[17], handKPs[18], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[18], handKPs[19], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[19], handKPs[20], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[5], handKPs[9], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[9], handKPs[13], lnColor, lnThickness);
+	cv::line(srcImage, handKPs[13], handKPs[17], lnColor, lnThickness);	
+	imshow("Hand with detected key points - connected", srcImage);
 }
