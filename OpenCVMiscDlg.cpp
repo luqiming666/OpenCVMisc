@@ -1878,6 +1878,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectQrcode()
 }
 
 // 参考文章：https://www.jb51.net/article/243259.htm
+// 手部关键点检测
 bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 {
 	// 计算模型尺寸
@@ -1887,7 +1888,8 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 	int modelHeight = 368;
 	int modelWidth = int(ratio * modelHeight);
 
-	// Read and initialize network
+	// 加载DNN模型
+	// 可以执行openpose开源项目 models目录下的getModels.bat 获取模型文件
 	static const char szModelFile[] = ".\\assets\\pose_iter_102000.caffemodel"; // 主要用于存储训练好的神经网络模型的权重和偏置等参数
 	static const char szProtoFile[] = ".\\assets\\pose_deploy.prototxt"; // 用于以文本格式定义神经网络的结构
 	if (!std::filesystem::exists(szModelFile)) {
@@ -1926,9 +1928,57 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 	return true;
 }
 
+// 手势识别
+bool HandPose_Recognition(std::vector<Point>& keypoints, int& count)
+{
+	static const int tipIds[] = { 4, 8, 12, 16, 20 };
+	
+	count = 0;
+	// 大拇指
+	if (keypoints[tipIds[0]].x > keypoints[tipIds[0] - 1].x) {
+		// 如果关键点'4'的x坐标大于关键点'3'的x坐标，则说明大拇指是张开的。计数1
+		count++;
+	}
+	// 其他4个手指
+	for (int i = 1; i < 5; i++) {
+		// 比如：如果关键点'8'的y坐标小于关键点'6'的y坐标，则说明食指是张开的。计数1
+		if (keypoints[tipIds[i]].y < keypoints[tipIds[i] - 2].y) {
+			count++;
+		}
+	}
+
+	return true;
+}
+
+bool HandPose_ShowResult(Mat& src, std::vector<Point>& keypoints, int& count)
+{
+	// 画出关键点所在位置
+	int ptCount = keypoints.size();
+	for (int i = 0; i < ptCount; i++) {
+		cv::circle(src, keypoints[i], 3, cv::Scalar(0, 0, 255), -1);
+		cv::putText(src, std::to_string(i), keypoints[i], FONT_HERSHEY_COMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+	}
+
+	// 为了显示骚操作，读取模板图片，作为识别结果
+	//std::vector<String> imageList;
+	//cv::glob(".\\assets\\gesture\\*.png", imageList);
+	//Mat temp = imread(imageList[count]);
+	char szTempFile[100];
+	snprintf(szTempFile, sizeof(szTempFile), "./assets/gesture/%02d.png", count);
+	Mat temp = imread(szTempFile);
+	resize(temp, temp, Size(100, 100), 1, 1, INTER_AREA);
+	// 叠加到原图的左下角
+	temp.copyTo(src(Rect(0, src.rows - temp.rows, temp.cols, temp.rows)));
+	putText(src, std::to_string(count), Point(20, 60), FONT_HERSHEY_COMPLEX, 2, Scalar(0, 0, 128), 3);
+
+	return true;
+}
+
 void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 {
-	Mat srcImage = imread(".\\assets\\palm.png");
+	const char szImgFile[] = ".\\assets\\palm.png";
+	//const char szImgFile[] = ".\\assets\\gesture_v.png";
+	Mat srcImage = imread(szImgFile);
 	//imshow("Source Image", srcImage);
 
 	std::vector<Point> handKPs(21);
@@ -1943,7 +1993,7 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 	imshow("Hand with detected key points", srcImage);
 
 	// 绘制关键点之间的连线
-	cv::Scalar lnColor(0, 255, 0);
+/*	cv::Scalar lnColor(0, 255, 0);
 	int lnThickness = 2;
 	cv::line(srcImage, handKPs[0], handKPs[1], lnColor, lnThickness);
 	cv::line(srcImage, handKPs[1], handKPs[2], lnColor, lnThickness);
@@ -1966,5 +2016,14 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 	cv::line(srcImage, handKPs[5], handKPs[9], lnColor, lnThickness);
 	cv::line(srcImage, handKPs[9], handKPs[13], lnColor, lnThickness);
 	cv::line(srcImage, handKPs[13], handKPs[17], lnColor, lnThickness);	
-	imshow("Hand with detected key points - connected", srcImage);
+	imshow("Hand with detected key points - connected", srcImage);*/
+
+	// 手势识别
+	int count = 0;
+	HandPose_Recognition(handKPs, count);
+	std::cout << "Finger count = " << count << std::endl;
+
+	// 展示结果
+	HandPose_ShowResult(srcImage, handKPs, count);
+	imshow("Hand pose - recognized", srcImage);
 }
