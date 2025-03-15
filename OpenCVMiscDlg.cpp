@@ -1997,6 +1997,8 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 	//const char szImgFile[] = ".\\assets\\gesture_one_right.png"; // good!
 	//const char szImgFile[] = ".\\assets\\gesture_v_right.png"; // good!
 	const char szImgFile[] = ".\\assets\\gesture_three_right.png"; // P18 P20 两个点不对！
+	//const char szImgFile[] = ".\\assets\\gesture_four_right.png"; // 食指未识别准确！
+	//const char szImgFile[] = ".\\assets\\gesture_four2_right.png"; // good!
 	Mat srcImage = imread(szImgFile);
 	//imshow("Source Image", srcImage);
 
