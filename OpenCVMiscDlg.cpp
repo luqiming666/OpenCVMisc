@@ -1974,10 +1974,14 @@ bool HandPose_ShowResult(Mat& src, std::vector<Point>& keypoints, int& count)
 	return true;
 }
 
+// 注意：请用右手！
+// 左手识别结果不佳！
 void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 {
-	const char szImgFile[] = ".\\assets\\palm.png";
-	//const char szImgFile[] = ".\\assets\\gesture_v.png";
+	const char szImgFile[] = ".\\assets\\palm.png"; // 5个手指均张开，右手
+	//const char szImgFile[] = ".\\assets\\gesture_one_right.png"; // good!
+	//const char szImgFile[] = ".\\assets\\gesture_v_right.png"; // good!
+	//const char szImgFile[] = ".\\assets\\gesture_three_right.png"; // P18 P20 两个点不对！
 	Mat srcImage = imread(szImgFile);
 	//imshow("Source Image", srcImage);
 
