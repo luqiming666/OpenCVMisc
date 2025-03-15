@@ -1928,22 +1928,37 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 	return true;
 }
 
+// 计算三个点构成的三角形的面积
+double calculateTriangleArea(const cv::Point& p1, const cv::Point& p2, const cv::Point& p3) {
+	return 0.5 * std::abs(p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y));
+}
+
 // 手势识别
+// 【算法增强】从指尖往下的三个点须在同一条直线上；如果三点共线，那么它们所构成的三角形面积为 0。
 bool HandPose_Recognition(std::vector<Point>& keypoints, int& count)
 {
 	static const int tipIds[] = { 4, 8, 12, 16, 20 };
+	static const int cAreaThreshold = 1000;
 	
 	count = 0;
 	// 大拇指
 	if (keypoints[tipIds[0]].x > keypoints[tipIds[0] - 1].x) {
 		// 如果关键点'4'的x坐标大于关键点'3'的x坐标，则说明大拇指是张开的。计数1
-		count++;
+		double area = calculateTriangleArea(keypoints[tipIds[0]], keypoints[tipIds[0]-1], keypoints[tipIds[0]-2]);
+		//std::cout << "Area 1 = " << area << std::endl;
+		if (area < cAreaThreshold) {
+			count++;
+		}		
 	}
 	// 其他4个手指
 	for (int i = 1; i < 5; i++) {
 		// 比如：如果关键点'8'的y坐标小于关键点'6'的y坐标，则说明食指是张开的。计数1
 		if (keypoints[tipIds[i]].y < keypoints[tipIds[i] - 2].y) {
-			count++;
+			double area = calculateTriangleArea(keypoints[tipIds[i]], keypoints[tipIds[i] - 1], keypoints[tipIds[i] - 2]);
+			//std::cout << "Area 2 = " << area << std::endl;
+			if (area < cAreaThreshold) {
+				count++;
+			}
 		}
 	}
 
@@ -1978,10 +1993,10 @@ bool HandPose_ShowResult(Mat& src, std::vector<Point>& keypoints, int& count)
 // 左手识别结果不佳！
 void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 {
-	const char szImgFile[] = ".\\assets\\palm.png"; // 5个手指均张开，右手
+	//const char szImgFile[] = ".\\assets\\palm.png"; // 5个手指均张开，右手
 	//const char szImgFile[] = ".\\assets\\gesture_one_right.png"; // good!
 	//const char szImgFile[] = ".\\assets\\gesture_v_right.png"; // good!
-	//const char szImgFile[] = ".\\assets\\gesture_three_right.png"; // P18 P20 两个点不对！
+	const char szImgFile[] = ".\\assets\\gesture_three_right.png"; // P18 P20 两个点不对！
 	Mat srcImage = imread(szImgFile);
 	//imshow("Source Image", srcImage);
 
