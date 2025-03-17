@@ -1911,17 +1911,25 @@ bool HandKeypoints_Detect(Mat& src, std::vector<Point>& keypoints)
 	net.setInput(blob, "image");
 
 	// 结果输出
+	// Mat格式说明：4维张量
+	// 1. 批次大小（Batch Size）：通常为 1，因为在大多数情况下一次只处理一张图像。
+	// 2. 通道数（Channels）：通道数等于手部关键点的数量加上背景通道（通常为 21 个手部关键点加上 1 个背景通道，共 22 个通道）。每个通道对应一个特定的关键点或背景的置信度图。
+	// 3. 高度（Height）：表示输出特征图的高度，一般是输入图像经过网络处理后特征图的高度尺寸。
+	// 4. 宽度（Width）：表示输出特征图的宽度，通常也是输入图像经过网络处理后特征图的宽度尺寸。
 	Mat output = net.forward();
+	//std::cout << "Dims: " << output.dims << " Size: " << output.size[0] << " x " << output.size[1] << " x " << output.size[2] << " x " << output.size[3] << std::endl;
 	int H = output.size[2];
 	int W = output.size[3];
 	int ptCount = keypoints.size();
 	for (int i = 0; i < ptCount; i++) {
 		Mat probMap(H, W, CV_32F, output.ptr(0, i)); // 第0行的第i列元素
-		resize(probMap, probMap, Size(width, height));
+		cv::resize(probMap, probMap, Size(width, height));
+
+		//std::cout << "Point index " << i << ": " << probMap << std::endl;
 
 		Point kp; // 最大可能性手部关键点位置
 		double classProb;
-		minMaxLoc(probMap, NULL, &classProb, NULL, &kp);
+		cv::minMaxLoc(probMap, NULL, &classProb, NULL, &kp);
 		keypoints[i] = kp;
 	}
 
@@ -2003,18 +2011,21 @@ void COpenCVMiscDlg::OnBnClickedButtonDetectHand()
 	//imshow("Source Image", srcImage);
 
 	std::vector<Point> handKPs(21);
-	HandKeypoints_Detect(srcImage, handKPs);
+	{
+		CAutoTicker autoTicker("HandPose Detection");
+		HandKeypoints_Detect(srcImage, handKPs);
+	}	
 	std::cout << "Hand keypoints = " << std::endl << handKPs << std::endl;
 
 	// 绘制关键点
-	for (const auto& pt : handKPs) {
+/*	for (const auto& pt : handKPs) {
 		// 使用 cv::circle 函数绘制实心圆来表示点
 		cv::circle(srcImage, pt, 6, cv::Scalar(0, 0, 255), -1);
 	}
 	imshow("Hand with detected key points", srcImage);
 
 	// 绘制关键点之间的连线
-/*	cv::Scalar lnColor(0, 255, 0);
+	cv::Scalar lnColor(0, 255, 0);
 	int lnThickness = 2;
 	cv::line(srcImage, handKPs[0], handKPs[1], lnColor, lnThickness);
 	cv::line(srcImage, handKPs[1], handKPs[2], lnColor, lnThickness);
